@@ -4,7 +4,8 @@
 
 include common.mk
 
-CFLAGS += -std=gnu99 -I$(SRC)/bsdrm/include
+CFLAGS += -std=gnu99 -I$(SRC)/bsdrm/include \
+  -Wno-error=return-type
 
 CC_STATIC_LIBRARY(libbsdrm.pic.a): \
   bsdrm/src/app.o \

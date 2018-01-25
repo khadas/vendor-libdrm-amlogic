@@ -19,7 +19,7 @@ struct bs_egl {
 	// Names are the original gl/egl function names with the prefix chopped off.
 	PFNEGLCREATEIMAGEKHRPROC CreateImageKHR;
 	PFNEGLDESTROYIMAGEKHRPROC DestroyImageKHR;
-	PFNEGLIMAGEFLUSHEXTERNALEXTPROC ImageFlushExternal;
+	//PFNEGLIMAGEFLUSHEXTERNALEXTPROC ImageFlushExternal;
 	PFNGLEGLIMAGETARGETTEXTURE2DOESPROC EGLImageTargetTexture2DOES;
 	PFNEGLCREATESYNCKHRPROC CreateSyncKHR;
 	PFNEGLCLIENTWAITSYNCKHRPROC ClientWaitSyncKHR;
@@ -66,8 +66,8 @@ bool bs_egl_setup(struct bs_egl *self)
 
 	self->CreateImageKHR = (PFNEGLCREATEIMAGEKHRPROC)eglGetProcAddress("eglCreateImageKHR");
 	self->DestroyImageKHR = (PFNEGLDESTROYIMAGEKHRPROC)eglGetProcAddress("eglDestroyImageKHR");
-	self->ImageFlushExternal =
-	    (PFNEGLIMAGEFLUSHEXTERNALEXTPROC)eglGetProcAddress("eglImageFlushExternalEXT");
+	//self->ImageFlushExternal =
+	    //(PFNEGLIMAGEFLUSHEXTERNALEXTPROC)eglGetProcAddress("eglImageFlushExternalEXT");
 	self->EGLImageTargetTexture2DOES =
 	    (PFNGLEGLIMAGETARGETTEXTURE2DOESPROC)eglGetProcAddress("glEGLImageTargetTexture2DOES");
 	if (!self->CreateImageKHR || !self->DestroyImageKHR || !self->EGLImageTargetTexture2DOES) {
@@ -139,7 +139,9 @@ bool bs_egl_setup(struct bs_egl *self)
 		bs_debug_error("EGL_KHR_fence_sync and EGL_KHR_wait_sync extension not supported");
 		goto destroy_context;
 	}
-
+#if 1
+	self->use_image_flush_external = false;
+#else
 	if (bs_egl_has_extension("EGL_EXT_image_flush_external", egl_extensions)) {
 		if (!self->ImageFlushExternal) {
 			bs_debug_print("WARNING", __func__, __FILE__, __LINE__,
@@ -149,6 +151,7 @@ bool bs_egl_setup(struct bs_egl *self)
 			self->use_image_flush_external = true;
 		}
 	}
+#endif
 	if (bs_egl_has_extension("EGL_EXT_image_dma_buf_import_modifiers", egl_extensions))
 		self->use_dma_buf_import_modifiers = true;
 
@@ -214,6 +217,7 @@ EGLImageKHR bs_egl_image_create_gbm(struct bs_egl *self, struct gbm_bo *bo)
 		khr_image_attrs[attrs_index++] = gbm_bo_get_plane_offset(bo, plane);
 		khr_image_attrs[attrs_index++] = EGL_DMA_BUF_PLANE0_PITCH_EXT + plane * 3;
 		khr_image_attrs[attrs_index++] = gbm_bo_get_plane_stride(bo, plane);
+#if 0
 		if (self->use_dma_buf_import_modifiers) {
 			const uint64_t modifier = gbm_bo_get_format_modifier(bo);
 			khr_image_attrs[attrs_index++] =
@@ -223,17 +227,19 @@ EGLImageKHR bs_egl_image_create_gbm(struct bs_egl *self, struct gbm_bo *bo)
 			    EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT + plane * 2;
 			khr_image_attrs[attrs_index++] = modifier >> 32;
 		}
+#endif
 	}
 
 	// Instead of disabling the extension completely, allow it to be used
 	// without creating EGLImages with correct attributes on Tegra.
 	// TODO(gsingh): Remove this once Tegra is end-of-life.
+#if 0
 	const char *egl_vendor = eglQueryString(self->display, EGL_VENDOR);
 	if (self->use_image_flush_external && strcmp(egl_vendor, "NVIDIA")) {
 		khr_image_attrs[attrs_index++] = EGL_IMAGE_EXTERNAL_FLUSH_EXT;
 		khr_image_attrs[attrs_index++] = EGL_TRUE;
 	}
-
+#endif
 	khr_image_attrs[attrs_index++] = EGL_NONE;
 
 	EGLImageKHR image =
@@ -268,8 +274,12 @@ bool bs_egl_image_flush_external(struct bs_egl *self, EGLImageKHR image)
 	assert(image != EGL_NO_IMAGE_KHR);
 	if (!self->use_image_flush_external)
 		return true;
+#if 1
+	return true;
+#else
 	const EGLAttrib attrs[] = { EGL_NONE };
 	return self->ImageFlushExternal(self->display, image, attrs);
+#endif
 }
 
 struct bs_egl_fb *bs_egl_fb_new(struct bs_egl *self, EGLImageKHR image)
