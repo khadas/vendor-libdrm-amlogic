@@ -301,11 +301,12 @@ int main(int argc, char **argv)
 	for (size_t fb_index = 0; fb_index < NUM_BUFFERS; fb_index++) {
 		bs_egl_fb_destroy(&egl_fbs[fb_index]);
 		bs_egl_image_destroy(egl, &egl_images[fb_index]);
-		drmModeRmFB(fd, ids[fb_idx]);
+		drmModeRmFB(fd, ids[fb_index]);
 		gbm_bo_destroy(bos[fb_index]);
 	}
 
 	bs_egl_destroy(&egl);
+	drmModeFreeConnector(connector);
 	gbm_device_destroy(gbm);
 	close(fd);
 	return 0;
