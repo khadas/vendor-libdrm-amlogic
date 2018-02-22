@@ -22,8 +22,8 @@
  *
  */
 
-#ifndef _AMLOGIC_DRM_H_
-#define _AMLOGIC_DRM_H_
+#ifndef _MESON_DRM_H_
+#define _MESON_DRM_H_
 
 #include <stdint.h>
 #include "drm.h"
@@ -37,33 +37,15 @@
  * @handle: returned a handle to created gem object.
  *	- this handle will be set by gem module of kernel side.
  */
-struct drm_amlogic_gem_create {
+struct drm_meson_gem_create {
 	uint64_t size;
 	uint32_t flags;
 	uint32_t handle;
 };
 
-/**
- * A structure for getting buffer offset.
- *
- * @handle: a pointer to gem object created.
- * @pad: just padding to be 64-bit aligned.
- * @offset: relatived offset value of the memory region allocated.
- *	- this value should be set by user.
- */
-struct drm_amlogic_gem_map_off {
-	uint32_t handle;
-	uint32_t pad;
-	uint64_t offset;
-};
+#define DRM_MESON_GEM_CREATE	0x00
 
-#define DRM_AMLOGIC_GEM_CREATE	0x00
-#define DRM_AMLOGIC_GEM_MAP_OFFSET	0x01
-
-#define DRM_IOCTL_AMLOGIC_GEM_CREATE DRM_IOWR(DRM_COMMAND_BASE + \
-		DRM_AMLOGIC_GEM_CREATE, struct drm_amlogic_gem_create)
-
-#define DRM_IOCTL_AMLOGIC_GEM_MAP_OFFSET DRM_IOWR(DRM_COMMAND_BASE + \
-		DRM_AMLOGIC_GEM_MAP_OFFSET, struct drm_amlogic_gem_map_off)
+#define DRM_IOCTL_MESON_GEM_CREATE DRM_IOWR(DRM_COMMAND_BASE + \
+		DRM_MESON_GEM_CREATE, struct drm_meson_gem_create)
 
 #endif
