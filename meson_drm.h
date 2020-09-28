@@ -27,6 +27,8 @@
 #define MESON_USE_TEXTURE			(1ull << 17)
 #define MESON_USE_VIDEO_PLANE		(1ull << 18)
 #define MESON_USE_VIDEO_AFBC		(1ull << 19)
+#define MESON_USE_VD1			(1ull << 20)
+#define MESON_USE_VD2			(1ull << 21)
 
 /**
  * User-desired buffer creation information structure.
