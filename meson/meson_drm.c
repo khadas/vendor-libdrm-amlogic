@@ -163,3 +163,36 @@ size_t meson_bo_size(struct meson_bo *bo)
 {
     return bo->size;
 }
+
+struct meson_bo *meson_bo_import(struct meson_device *dev, int fd, size_t size, uint32_t flags)
+{
+    int ret;
+    struct meson_bo *bo = NULL;
+
+    struct drm_prime_handle req = {
+        .fd = fd,
+    };
+
+    bo = calloc(sizeof(*bo), 1);
+    if (!bo) {
+        fprintf(stderr, "failed to create bo[%s].\n",
+            strerror(errno));
+        goto fail;
+    }
+
+    ret = drmIoctl(dev->fd, DRM_IOCTL_PRIME_FD_TO_HANDLE, &req);
+    if (ret)
+        goto err_free_bo;
+
+    bo->dev = dev;
+    bo->size = size;
+    bo->flags = flags;
+    bo->handle = req.handle;
+
+    return bo;
+
+err_free_bo:
+    free(bo);
+fail:
+    return NULL;
+}

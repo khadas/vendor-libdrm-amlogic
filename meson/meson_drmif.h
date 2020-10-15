@@ -47,5 +47,6 @@ void meson_bo_destroy(struct meson_bo *bo);
 uint32_t meson_bo_handle(struct meson_bo *bo);
 int meson_bo_dmabuf(struct meson_bo *bo);
 size_t meson_bo_size(struct meson_bo *bo);
+struct meson_bo *meson_bo_import(struct meson_device *dev, int fd, size_t size, uint32_t flags);
 
 #endif

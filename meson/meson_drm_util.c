@@ -58,6 +58,15 @@ struct drm_buf *drm_alloc_buf(struct drm_display *disp, struct drm_buf_metadata 
     return buf;
 }
 
+struct drm_buf *drm_import_buf(struct drm_display *disp, struct drm_buf_import *info)
+{
+    struct drm_buf *buf = NULL;
+
+    buf = disp->import_buf(disp, info);
+
+    return buf;
+}
+
 int drm_free_buf(struct drm_buf *buf)
 {
     int ret;

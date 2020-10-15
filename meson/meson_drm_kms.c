@@ -70,30 +70,8 @@ struct plane_state {
     struct property in_formats;
 };
 
-struct plane {
-    drmModePlane *plane;
-    drmModeObjectProperties *props;
-    drmModePropertyRes **props_info;
-};
-
-struct crtc {
-    drmModeCrtc *crtc;
-    drmModeObjectProperties *props;
-    drmModePropertyRes **props_info;
-};
-
-struct connector {
-    drmModeConnector *connector;
-    drmModeObjectProperties *props;
-    drmModePropertyRes **props_info;
-};
-
 struct kms_display {
     struct drm_display base;
-
-    struct plane *plane;
-    struct crtc *crtc;
-    struct connector *conn;
 
     int num_crtc;
     struct crtc_state *crtc_states[MAX_CRTC];
@@ -109,156 +87,32 @@ struct kms_display {
 
 static void kms_destroy_display(struct drm_display *drm_disp)
 {
+    int i;
     struct kms_display *disp = to_kms_display(drm_disp);
-    free(disp->conn);
-    free(disp->crtc);
-    free(disp->plane);
+    close(drm_disp->drm_fd);
+    meson_device_destroy(drm_disp->dev);
+
+    for (i = 0; i < MAX_CRTC; i++) {
+        if (disp->crtc_states[i])
+            free(disp->crtc_states[i]);
+    }
+
+    for (i = 0; i < MAX_CONNECTOR; i++) {
+        if (disp->conn_states[i])
+            free(disp->conn_states[i]);
+    }
+
+    for (i = 0; i < MAX_OSD_PLANE; i++) {
+        if (disp->osd_states[i])
+            free(disp->osd_states[i]);
+    }
+
+    for (i = 0; i < MAX_OSD_PLANE; i++) {
+        if (disp->vid_states[i])
+            free(disp->vid_states[i]);
+    }
+
     free(disp);
-}
-
-static int alloc_bos(struct drm_display *drm_disp, struct drm_buf *buf, uint32_t *bo_handles)
-{
-    int i;
-    uint32_t size = 0;
-    uint32_t width = buf->width;
-    uint32_t height = buf->height;
-
-    for (i = 0; i < buf->nbo; i++) {
-        if (buf->nbo == 1 && buf->flags == MESON_USE_VIDEO_AFBC) {
-            size = width * height;
-            buf->pitches[i] = width * 2;
-            buf->commit_to_video = 1;
-        } else if (buf->flags | MESON_USE_VIDEO_PLANE) {
-            if ( i == 0 )
-                size = width * height;
-            else
-                size = width * height / 2;
-
-            buf->pitches[i] = width;
-            buf->commit_to_video = 1;
-        }
-
-        buf->size += size;
-        buf->bos[i] = meson_bo_create(drm_disp->dev, size, buf->flags);
-        if (buf->bos[i]) {
-            bo_handles[i] = meson_bo_handle(buf->bos[i]);
-            buf->fd[i] = meson_bo_dmabuf(buf->bos[i]);
-        } else {
-            fprintf(stderr, "meson_bo_create fila\n");
-            return -1;
-        }
-    }
-
-    return 0;
-}
-
-static int add_framebuffer(int fd, struct drm_buf *buf, uint32_t *bo_handles, uint64_t modifier)
-{
-    int i, ret;
-    uint64_t modifiers[4] = { 0, 0, 0, 0 };
-    uint32_t flags = 0;
-    uint32_t fb_id;
-
-    for ( i = 0; i < buf->nbo; i++) {
-        if (bo_handles[i] != 0 && modifier != DRM_FORMAT_MOD_NONE) {
-            flags |= DRM_MODE_FB_MODIFIERS;
-            modifiers[i] = modifier;
-        }
-    }
-
-    ret = drmModeAddFB2WithModifiers(fd, buf->width, buf->height, buf->fourcc,
-                bo_handles, buf->pitches, buf->offsets, modifiers, &fb_id, flags);
-    if (ret < 0) {
-        fprintf(stderr, "Unable to add framebuffer for plane: %s\n", strerror(errno));
-		return -1;
-    }
-
-    buf->fb_id = fb_id;
-    return 0;
-}
-
-static struct drm_buf *kms_alloc_buf(struct drm_display *drm_disp, struct drm_buf_metadata *info)
-{
-    struct drm_buf *buf = NULL;
-    uint32_t bo_handles[4] = {0};
-
-    buf = calloc(1, sizeof(*buf));
-    buf->fourcc = info->fourcc;
-    buf->width = info->width;
-    buf->height = info->height;
-    buf->flags = info->flags;
-    buf->fence_fd = -1;
-    buf->disp = drm_disp;
-
-    if (!info->fourcc)
-        buf->fourcc = DRM_FORMAT_ARGB8888;
-
-    switch (buf->fourcc) {
-    case DRM_FORMAT_ARGB8888:
-        buf->nbo = 1;
-        break;
-    case DRM_FORMAT_UYVY:
-    case DRM_FORMAT_YUYV:
-        buf->nbo = 1;
-        break;
-    case DRM_FORMAT_NV12:
-    case DRM_FORMAT_NV21:
-        buf->nbo = 2;
-        break;
-    default:
-        fprintf(stderr, "unsupport format: 0x%08x\n", buf->fourcc);
-        break;
-    }
-
-    alloc_bos(drm_disp, buf, bo_handles);
-
-    add_framebuffer(drm_disp->drm_fd, buf, bo_handles, DRM_FORMAT_MOD_NONE);
-
-    return buf;
-}
-static int kms_alloc_bufs(struct drm_display *drm_disp, int num, struct drm_buf_metadata *info)
-{
-    int i;
-    struct drm_buf *buf;
-    uint32_t bo_handles[4] = {0};
-
-    drm_disp->bufs = calloc(num, sizeof(*drm_disp->bufs));
-    drm_disp->nbuf = num;
-
-    for ( i = 0; i < num; i++) {
-        buf = &drm_disp->bufs[i];
-        buf->fourcc = info->fourcc;
-        buf->width = info->width;
-        buf->height = info->height;
-        buf->flags = info->flags;
-        buf->fence_fd = -1;
-        buf->disp = drm_disp;
-
-        if (!info->fourcc)
-            buf->fourcc = DRM_FORMAT_ARGB8888;
-
-        switch (buf->fourcc) {
-        case DRM_FORMAT_ARGB8888:
-            buf->nbo = 1;
-            break;
-        case DRM_FORMAT_UYVY:
-        case DRM_FORMAT_YUYV:
-            buf->nbo = 1;
-            break;
-        case DRM_FORMAT_NV12:
-        case DRM_FORMAT_NV21:
-            buf->nbo = 2;
-            break;
-        default:
-            fprintf(stderr, "unsupport format: 0x%08x\n", buf->fourcc);
-            break;
-        }
-
-        alloc_bos(drm_disp, buf, bo_handles);
-
-        add_framebuffer(drm_disp->drm_fd, buf, bo_handles, DRM_FORMAT_MOD_NONE);
-    }
-    return 0;
 }
 
 static int free_buf(struct drm_display *drm_disp, struct drm_buf *buf)
@@ -314,6 +168,251 @@ static int kms_free_buf(struct drm_buf *buf)
     return 0;
 }
 
+static struct meson_bo *alloc_bo(struct drm_display *drm_disp, struct drm_buf *buf, uint32_t bpp, uint32_t width,
+                                 uint32_t height, uint32_t *bo_handle, uint32_t *pitch)
+{
+    uint32_t size;
+    struct meson_bo *bo;
+
+    size = width * height * bpp / 8;
+    bo = meson_bo_create(drm_disp->dev, size, buf->flags);
+    if (bo) {
+        *bo_handle = meson_bo_handle(bo);
+        *pitch = width * bpp / 8;
+        return bo;
+    } else {
+        fprintf(stderr, "meson_bo_create fail\n");
+        return NULL;
+    }
+}
+
+static int alloc_bos(struct drm_display *drm_disp, struct drm_buf *buf, uint32_t *bo_handles)
+{
+    uint32_t width = buf->width;
+    uint32_t height = buf->height;
+
+    switch (buf->fourcc) {
+    case DRM_FORMAT_ARGB8888:
+        buf->nbo = 1;
+        buf->bos[0] = alloc_bo(drm_disp, buf, 32, width, height, &bo_handles[0], &buf->pitches[0]);
+        if (!buf->bos[0]) {
+            fprintf(stderr, "alloc_bo argb888 fail\n");
+            return -1;
+        }
+
+        buf->size = width * height * 4;
+        buf->fd[0] = meson_bo_dmabuf(buf->bos[0]);
+        break;
+    case DRM_FORMAT_UYVY:
+    case DRM_FORMAT_YUYV:
+        buf->nbo = 1;
+        buf->bos[0] = alloc_bo(drm_disp, buf, 16, width, height, &bo_handles[0], &buf->pitches[0]);
+        if (!buf->bos[0]) {
+            fprintf(stderr, "alloc_bo yuyv or uyvy fail\n");
+            return -1;
+        }
+
+        buf->size = width * height * 2;
+        buf->fd[0] = meson_bo_dmabuf(buf->bos[0]);
+        buf->commit_to_video = 1;
+        break;
+    case DRM_FORMAT_NV12:
+    case DRM_FORMAT_NV21:
+        buf->nbo = 2;
+        buf->bos[0] = alloc_bo(drm_disp, buf, 8, width, height, &bo_handles[0], &buf->pitches[0]);
+        if (!buf->bos[0]) {
+            fprintf(stderr, "alloc_bo nv12 or nv21 fail\n");
+            return -1;
+        }
+
+        buf->fd[0] = meson_bo_dmabuf(buf->bos[0]);
+
+        buf->bos[1] = alloc_bo(drm_disp, buf, 16, width/2, height/2, &bo_handles[1], &buf->pitches[1]);
+        if (!buf->bos[1]) {
+            fprintf(stderr, "alloc_bo argb888 fail\n");
+            return -1;
+        }
+        buf->fd[1] = meson_bo_dmabuf(buf->bos[1]);
+        buf->size = width * height * 3 / 2;
+        buf->commit_to_video = 1;
+        break;
+    default:
+        fprintf(stderr, "unsupport format: 0x%08x\n", buf->fourcc);
+        break;
+    }
+
+    return 0;
+}
+
+static int add_framebuffer(int fd, struct drm_buf *buf, uint32_t *bo_handles, uint64_t modifier)
+{
+    int i, ret;
+    uint64_t modifiers[4] = { 0, 0, 0, 0 };
+    uint32_t flags = 0;
+    uint32_t fb_id;
+
+    for ( i = 0; i < buf->nbo; i++) {
+        if (bo_handles[i] != 0 && modifier != DRM_FORMAT_MOD_NONE) {
+            flags |= DRM_MODE_FB_MODIFIERS;
+            modifiers[i] = modifier;
+        }
+    }
+
+    ret = drmModeAddFB2WithModifiers(fd, buf->width, buf->height, buf->fourcc,
+                bo_handles, buf->pitches, buf->offsets, modifiers, &fb_id, flags);
+    if (ret < 0) {
+        fprintf(stderr, "Unable to add framebuffer for plane: %s\n", strerror(errno));
+        return -1;
+    }
+
+    buf->fb_id = fb_id;
+    return 0;
+}
+
+static struct drm_buf *kms_alloc_buf(struct drm_display *drm_disp, struct drm_buf_metadata *info)
+{
+    int ret;
+    struct drm_buf *buf = NULL;
+    uint32_t bo_handles[4] = {0};
+
+    buf = calloc(1, sizeof(*buf));
+    buf->fourcc = info->fourcc;
+    buf->width = info->width;
+    buf->height = info->height;
+    buf->flags = info->flags;
+    buf->fence_fd = -1;
+    buf->disp = drm_disp;
+
+    ret = alloc_bos(drm_disp, buf, bo_handles);
+    if (ret) {
+        fprintf(stderr, "alloc_bos fail\n");
+        free(buf);
+        return NULL;
+    }
+
+    ret = add_framebuffer(drm_disp->drm_fd, buf, bo_handles, DRM_FORMAT_MOD_NONE);
+    if (ret) {
+        fprintf(stderr, "add_framebuffer fail\n");
+        free_buf(drm_disp, buf);
+        free(buf);
+        return NULL;
+    }
+
+    return buf;
+}
+
+static int kms_alloc_bufs(struct drm_display *drm_disp, int num, struct drm_buf_metadata *info)
+{
+    int i, ret;
+    struct drm_buf *buf;
+    uint32_t bo_handles[4] = {0};
+
+    drm_disp->bufs = calloc(num, sizeof(*drm_disp->bufs));
+    drm_disp->nbuf = num;
+
+    for ( i = 0; i < num; i++) {
+        buf = &drm_disp->bufs[i];
+        buf->fourcc = info->fourcc;
+        buf->width = info->width;
+        buf->height = info->height;
+        buf->flags = info->flags;
+        buf->fence_fd = -1;
+        buf->disp = drm_disp;
+
+        if (!info->fourcc)
+            buf->fourcc = DRM_FORMAT_ARGB8888;
+
+        switch (buf->fourcc) {
+        case DRM_FORMAT_ARGB8888:
+            buf->nbo = 1;
+            break;
+        case DRM_FORMAT_UYVY:
+        case DRM_FORMAT_YUYV:
+            buf->nbo = 1;
+            break;
+        case DRM_FORMAT_NV12:
+        case DRM_FORMAT_NV21:
+            buf->nbo = 2;
+            break;
+        default:
+            fprintf(stderr, "unsupport format: 0x%08x\n", buf->fourcc);
+            break;
+        }
+
+        ret = alloc_bos(drm_disp, buf, bo_handles);
+        if (ret) {
+            fprintf(stderr, "alloc_bos fail\n");
+            return -1;
+        }
+
+        ret = add_framebuffer(drm_disp->drm_fd, buf, bo_handles, DRM_FORMAT_MOD_NONE);
+        if (ret) {
+            fprintf(stderr, "add_framebuffer fail\n");
+            free_buf(drm_disp, buf);
+            return -1;
+        }
+    }
+    return 0;
+}
+
+static struct drm_buf *kms_import_buf(struct drm_display *disp, struct drm_buf_import *info)
+{
+    int i;
+    uint32_t size;
+    struct drm_buf *buf = NULL;
+    uint32_t bo_handles[4] = {0};
+
+    buf = calloc(1, sizeof(*buf));
+    buf->fourcc = info->fourcc;
+    buf->width = info->width;
+    buf->height = info->height;
+    buf->flags = info->flags;
+    buf->fence_fd = -1;
+    buf->disp = disp;
+
+    if (!info->fourcc)
+        buf->fourcc = DRM_FORMAT_ARGB8888;
+
+    switch (buf->fourcc) {
+    case DRM_FORMAT_ARGB8888:
+        buf->nbo = 1;
+        break;
+    case DRM_FORMAT_UYVY:
+    case DRM_FORMAT_YUYV:
+        buf->nbo = 1;
+        break;
+    case DRM_FORMAT_NV12:
+    case DRM_FORMAT_NV21:
+        buf->nbo = 2;
+        break;
+    default:
+        fprintf(stderr, "unsupport format: 0x%08x\n", buf->fourcc);
+        break;
+    }
+
+    for (i = 0; i < buf->nbo; i++) {
+        if ( i == 0 )
+            size = info->width * info->height;
+        else
+            size = info->width * info->height / 2;
+
+        buf->size += size;
+        buf->fd[i] = info->fd[i];
+        buf->pitches[i] = buf->width;
+        buf->bos[i] = meson_bo_import(disp->dev, info->fd[i], size, info->flags);
+        if (!buf->bos[i]) {
+            fprintf(stderr, "meson_bo_import fail\n");
+            return NULL;
+        }
+
+        bo_handles[i] = meson_bo_handle(buf->bos[i]);
+    }
+
+    add_framebuffer(disp->drm_fd, buf, bo_handles, DRM_FORMAT_MOD_NONE);
+
+    return buf;
+}
+
 static int kms_post_buf(struct drm_display *drm_disp, struct drm_buf *buf)
 {
     int ret;
@@ -355,8 +454,18 @@ static int kms_post_buf(struct drm_display *drm_disp, struct drm_buf *buf)
 
     drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_x.id, 0);
     drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_y.id, 0);
-    drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_w.id, conn_state->mode.hdisplay);
-    drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_h.id, conn_state->mode.vdisplay);
+    if (buf->crtc_w == 0) {
+        drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_w.id, conn_state->mode.hdisplay);
+    } else {
+        drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_w.id, buf->crtc_w);
+    }
+
+    if (buf->crtc_h == 0) {
+        drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_h.id, conn_state->mode.vdisplay);
+    } else {
+        drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_h.id, buf->crtc_h);
+    }
+
     drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_x.id, 0);
     drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_y.id, 0);
     drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_w.id, buf->width << 16);
@@ -393,18 +502,19 @@ static void getproperty(int drm_fd, drmModeObjectProperties* props, const char *
     drmModePropertyRes *res;
     for (i = 0; i < props->count_props; i++) {
         res = drmModeGetProperty(drm_fd, props->props[i]);
-        if (strcmp(name, res->name))
-            continue;
+        if (res && !strcmp(name, res->name)) {
+            p->id = res->prop_id;
+            p->value = props->prop_values[i];
+            //fprintf(stdout, "getproperty: %s, id: %u, value: %llu \n", res->name, p->id, p->value);
+        }
 
-        p->id = res->prop_id;
-        p->value = props->prop_values[i];
-        //fprintf(stdout, "getproperty: %s, id: %u, value: %llu \n", res->name, p->id, p->value);
+        drmModeFreeProperty(res);
     }
 }
 
 static int populate_connectors(drmModeRes *resources, struct kms_display *disp)
 {
-    int ret, i, j;
+    int i, j;
     int num_connector = 0;
     struct connector_state *state;
     drmModeConnector *connector;
@@ -413,9 +523,12 @@ static int populate_connectors(drmModeRes *resources, struct kms_display *disp)
 
     for (i = 0; i < resources->count_connectors; i++) {
         connector = drmModeGetConnector(disp->base.drm_fd, resources->connectors[i]);
-        disp->conn[i].connector = connector;
+        if (!connector) {
+            fprintf(stderr, "drmModeGetConnector fail.\n");
+            continue;
+        }
 
-        if ( connector->connector_type == DRM_MODE_CONNECTOR_TV )
+        if (connector->connector_type == DRM_MODE_CONNECTOR_TV)
             continue;
 
         state = calloc(1, sizeof(*state));
@@ -424,7 +537,10 @@ static int populate_connectors(drmModeRes *resources, struct kms_display *disp)
 
         for (j = 0; j < connector->count_encoders; j++) {
             encoder = drmModeGetEncoder(disp->base.drm_fd, connector->encoders[j]);
-            state->crtc_mask |= encoder->possible_crtcs;
+            if (encoder) {
+                state->crtc_mask |= encoder->possible_crtcs;
+                drmModeFreeEncoder(encoder);
+            }
         }
 
         if (connector->count_modes)
@@ -442,37 +558,55 @@ static int populate_connectors(drmModeRes *resources, struct kms_display *disp)
         disp->base.vrefresh = state->mode.vrefresh;
 
         props = drmModeObjectGetProperties(disp->base.drm_fd, resources->connectors[i], DRM_MODE_OBJECT_CONNECTOR);
-        disp->conn[i].props = props;
         getproperty(disp->base.drm_fd, props, "CRTC_ID", &state->crtc_id);
+
+        if (props)
+            drmModeFreeObjectProperties(props);
+
+        if (connector)
+            drmModeFreeConnector(connector);
     }
 
     disp->num_connector = num_connector;
     fprintf(stdout, "found %d connector\n", num_connector);
+    return 0;
 }
 
 static int populate_crtcs(drmModeRes *resources, struct kms_display *disp)
 {
-    int ret, i;
+    int i;
     int num_crtc = 0;
     struct crtc_state *state;
     drmModeObjectProperties *props;
 
     for (i = 0; i < resources->count_crtcs; i++) {
         state = calloc(1, sizeof(*state));
+        if (!state) {
+            fprintf(stderr, "calloc crtc state fail.\n");
+            return -1;
+        }
+
         disp->crtc_states[num_crtc++] = state;
         state->id = resources->crtcs[i];
 
         props = drmModeObjectGetProperties(disp->base.drm_fd, resources->crtcs[i], DRM_MODE_OBJECT_CRTC);
-        disp->crtc[i].props = props;
-        getproperty(disp->base.drm_fd, props, "MODE_ID", &state->mode_id);
-        getproperty(disp->base.drm_fd, props, "ACTIVE", &state->active);
-        getproperty(disp->base.drm_fd, props, "OUT_FENCE_PTR", &state->out_fence);
-        getproperty(disp->base.drm_fd, props, "VIDEO_OUT_FENCE_PTR", &state->video_out_fence);
+        if (props) {
+            getproperty(disp->base.drm_fd, props, "MODE_ID", &state->mode_id);
+            getproperty(disp->base.drm_fd, props, "ACTIVE", &state->active);
+            getproperty(disp->base.drm_fd, props, "OUT_FENCE_PTR", &state->out_fence);
+            getproperty(disp->base.drm_fd, props, "VIDEO_OUT_FENCE_PTR", &state->video_out_fence);
+
+            drmModeFreeObjectProperties(props);
+        } else {
+            fprintf(stderr, "get crtc obj property fail\n");
+            return -1;
+        }
     }
 
     disp->num_crtc = num_crtc;
 
     fprintf(stdout, "found %d crtc\n", num_crtc);
+    return 0;
 }
 
 static int is_plane_support_yuv(drmModePlane * plane)
@@ -493,7 +627,7 @@ static int is_plane_support_yuv(drmModePlane * plane)
 
 static int populate_planes(drmModeRes *resources, struct kms_display *disp)
 {
-    int ret, i;
+    int i;
     int num_osd_plane = 0;
     int num_vid_plane = 0;
     struct plane_state *state;
@@ -502,42 +636,65 @@ static int populate_planes(drmModeRes *resources, struct kms_display *disp)
     drmModeObjectProperties *props;
 
     plane_res = drmModeGetPlaneResources(disp->base.drm_fd);
-
-    disp->plane = calloc(plane_res->count_planes, sizeof(*disp->plane));
+    if (!plane_res) {
+        fprintf(stderr, "drmModeGetPlaneResources fail.\n");
+        goto error;
+    }
 
     for (i = 0; i < plane_res->count_planes; i++) {
         state = calloc(1, sizeof(*state));
+        if (!state) {
+            fprintf(stderr, "calloc plane state fail.\n");
+            goto error;
+        }
+
         plane = drmModeGetPlane(disp->base.drm_fd, plane_res->planes[i]);
-        disp->plane[i].plane = plane;
-        if (is_plane_support_yuv(plane))
-            disp->vid_states[num_vid_plane++] = state;
-        else
-            disp->osd_states[num_osd_plane++] = state;
+        if (plane) {
+            if (is_plane_support_yuv(plane))
+                disp->vid_states[num_vid_plane++] = state;
+            else
+                disp->osd_states[num_osd_plane++] = state;
 
-        state->id = plane_res->planes[i];
-        state->crtc_mask = plane->possible_crtcs;
+            state->id = plane_res->planes[i];
+            state->crtc_mask = plane->possible_crtcs;
 
-        props = drmModeObjectGetProperties(disp->base.drm_fd, plane_res->planes[i], DRM_MODE_OBJECT_PLANE);
-        disp->plane[i].props = props;
-        getproperty(disp->base.drm_fd, props, "CRTC_ID", &state->crtc_id);
-        getproperty(disp->base.drm_fd, props, "CRTC_X", &state->crtc_x);
-        getproperty(disp->base.drm_fd, props, "CRTC_Y", &state->crtc_y);
-        getproperty(disp->base.drm_fd, props, "CRTC_W", &state->crtc_w);
-        getproperty(disp->base.drm_fd, props, "CRTC_H", &state->crtc_h);
-        getproperty(disp->base.drm_fd, props, "FB_ID", &state->fb_id);
-        getproperty(disp->base.drm_fd, props, "SRC_X", &state->src_x);
-        getproperty(disp->base.drm_fd, props, "SRC_Y", &state->src_y);
-        getproperty(disp->base.drm_fd, props, "SRC_W", &state->src_w);
-        getproperty(disp->base.drm_fd, props, "SRC_H", &state->src_h);
-        getproperty(disp->base.drm_fd, props, "type", &state->type);
-        getproperty(disp->base.drm_fd, props, "IN_FENCE_FD", &state->in_fence_fd);
-        getproperty(disp->base.drm_fd, props, "IN_FORMATS", &state->in_formats);
+            props = drmModeObjectGetProperties(disp->base.drm_fd, plane_res->planes[i], DRM_MODE_OBJECT_PLANE);
+            if (props) {
+                getproperty(disp->base.drm_fd, props, "CRTC_ID", &state->crtc_id);
+                getproperty(disp->base.drm_fd, props, "CRTC_X", &state->crtc_x);
+                getproperty(disp->base.drm_fd, props, "CRTC_Y", &state->crtc_y);
+                getproperty(disp->base.drm_fd, props, "CRTC_W", &state->crtc_w);
+                getproperty(disp->base.drm_fd, props, "CRTC_H", &state->crtc_h);
+                getproperty(disp->base.drm_fd, props, "FB_ID", &state->fb_id);
+                getproperty(disp->base.drm_fd, props, "SRC_X", &state->src_x);
+                getproperty(disp->base.drm_fd, props, "SRC_Y", &state->src_y);
+                getproperty(disp->base.drm_fd, props, "SRC_W", &state->src_w);
+                getproperty(disp->base.drm_fd, props, "SRC_H", &state->src_h);
+                getproperty(disp->base.drm_fd, props, "type", &state->type);
+                getproperty(disp->base.drm_fd, props, "IN_FENCE_FD", &state->in_fence_fd);
+                getproperty(disp->base.drm_fd, props, "IN_FORMATS", &state->in_formats);
+            }
+        }
+
+        if (props)
+            drmModeFreeObjectProperties(props);
+
+        if (plane)
+            drmModeFreePlane(plane);
     }
 
     disp->num_osd_plane = num_osd_plane;
     disp->num_vid_plane = num_vid_plane;
 
+    drmModeFreePlaneResources(plane_res);
+
     fprintf(stdout, "found %d osd, %d video\n", num_osd_plane, num_vid_plane);
+    return 0;
+
+error:
+    drmModeFreePlaneResources(plane_res);
+
+    return -1;
 }
 
 static int drm_kms_init_resource(struct kms_display *disp)
@@ -555,42 +712,65 @@ static int drm_kms_init_resource(struct kms_display *disp)
 
     disp->base.drm_fd = drm_fd;
     disp->base.dev = meson_device_create(drm_fd);
+    if (!disp->base.dev) {
+        fprintf(stderr, "meson_device_create fail\n");
+        goto error3;
+    }
 
     ret = drmSetClientCap(drm_fd, DRM_CLIENT_CAP_ATOMIC, 1);
     if (ret < 0) {
         fprintf(stderr, "Unable to set DRM atomic capability: %s\n",
                 strerror(errno));
-        return -1;
+        goto error2;
     }
 
     ret = drmSetClientCap(drm_fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1);
     if (ret < 0) {
         fprintf(stderr, "Unable to set DRM universal planes capability: %s\n",
                 strerror(errno));
-        return -1;
+        goto error2;
     }
 
     resources = drmModeGetResources(drm_fd);
     if (!resources) {
         fprintf(stderr, "drmModeGetResources failed: %s\n", strerror(errno));
-        return -1;
+        goto error2;
     }
 
-    disp->conn = calloc(resources->count_connectors, sizeof(*disp->conn));
-    disp->crtc = calloc(resources->count_crtcs, sizeof(*disp->crtc));
+    ret = populate_connectors(resources, disp);
+    if (ret)
+        goto error1;
 
-    populate_connectors(resources, disp);
-    populate_crtcs(resources, disp);
-    populate_planes(resources, disp);
+    ret = populate_crtcs(resources, disp);
+    if (ret)
+        goto error1;
+
+    ret = populate_planes(resources, disp);
+    if (ret)
+        goto error1;
 
     return 0;
+
+error1:
+    drmModeFreeResources(resources);
+error2:
+    meson_device_destroy(disp->base.dev);
+error3:
+    close(drm_fd);
+
+    return -1;
 }
 
 struct drm_display *drm_kms_init(void)
 {
+    int ret;
     struct kms_display *display;
     struct drm_display *base;
     display = calloc(1, sizeof(*display));
+    if (!display) {
+        fprintf(stderr, "calloc kms_display fail\n");
+        return NULL;
+    }
 
     base = &display->base;
     base->destroy_display = kms_destroy_display;
@@ -598,10 +778,16 @@ struct drm_display *drm_kms_init(void)
     base->free_bufs = kms_free_bufs;
 
     base->alloc_buf = kms_alloc_buf;
+    base->import_buf = kms_import_buf;
     base->free_buf = kms_free_buf;
     base->post_buf = kms_post_buf;
 
-    drm_kms_init_resource(display);
+    ret = drm_kms_init_resource(display);
+    if (ret) {
+        fprintf(stderr, "drm_kms_init_resource fail.\n");
+        free(display);
+        return NULL;
+    }
 
     return base;
 }

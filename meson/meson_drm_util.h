@@ -36,7 +36,8 @@ struct drm_buf {
     int fence_fd;
 
     uint32_t src_x, src_y, src_w, src_h;
-    uint32_t crtc_x, crtc_y, crtc_w, crtc_h;
+    int crtc_x, crtc_y;
+    uint32_t crtc_w, crtc_h;
     uint32_t zpos;
 
     struct drm_display *disp;
@@ -48,6 +49,14 @@ struct drm_buf_metadata {
     uint32_t width;
     uint32_t height;
     uint32_t flags;
+};
+
+struct drm_buf_import {
+    uint32_t fourcc;
+    uint32_t width;
+    uint32_t height;
+    uint32_t flags;
+    int fd[4];
 };
 
 struct drm_display {
@@ -64,6 +73,7 @@ struct drm_display {
     int (*free_bufs)(struct drm_display *disp);
 
     struct drm_buf *(*alloc_buf)(struct drm_display *disp, struct drm_buf_metadata *info);
+    struct drm_buf *(*import_buf)(struct drm_display *disp, struct drm_buf_import *info);
     int (*free_buf)(struct drm_buf *buf);
     int (*post_buf)(struct drm_display *disp, struct drm_buf *buf);
 
@@ -83,6 +93,7 @@ int drm_alloc_bufs(struct drm_display *disp, int num, struct drm_buf_metadata *i
 int drm_free_bufs(struct drm_display *disp);
 
 struct drm_buf *drm_alloc_buf(struct drm_display *disp, struct drm_buf_metadata *info);
+struct drm_buf *drm_import_buf(struct drm_display *disp, struct drm_buf_import *info);
 int drm_free_buf(struct drm_buf *buf);
 int drm_post_buf(struct drm_display *disp, struct drm_buf *buf);
 
