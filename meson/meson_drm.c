@@ -156,7 +156,7 @@ int meson_bo_dmabuf(struct meson_bo *bo)
         bo->fd = req.fd;
     }
 
-    return dup(bo->fd);
+    return bo->fd;
 }
 
 size_t meson_bo_size(struct meson_bo *bo)
