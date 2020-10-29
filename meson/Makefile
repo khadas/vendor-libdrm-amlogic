@@ -1,4 +1,4 @@
-OBJ = meson_drm.c meson_drm_kms.c meson_drm_util.c
+OBJ = meson_drm.c meson_drm_kms.c meson_drm_util.c meson_drm_async_commit.c
 
 TARGET = libdrm_meson.so
 

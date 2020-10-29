@@ -97,4 +97,7 @@ struct drm_buf *drm_import_buf(struct drm_display *disp, struct drm_buf_import *
 int drm_free_buf(struct drm_buf *buf);
 int drm_post_buf(struct drm_display *disp, struct drm_buf *buf);
 
+int drmModeAsyncAtomicCommit(int fd, drmModeAtomicReqPtr req,
+                                   uint32_t flags, void *user_data);
+
 #endif

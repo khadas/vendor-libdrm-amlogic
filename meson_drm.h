@@ -44,9 +44,12 @@ struct drm_meson_gem_create {
 	__u32 handle;
 };
 
-#define DRM_MESON_GEM_CREATE		0x00
-
+/*Memory related.*/
 #define DRM_IOCTL_MESON_GEM_CREATE		DRM_IOWR(DRM_COMMAND_BASE + \
-		DRM_MESON_GEM_CREATE, struct drm_meson_gem_create)
+		0x00, struct drm_meson_gem_create)
+
+/*KMS related.*/
+#define DRM_IOCTL_MESON_ASYNC_ATOMIC	DRM_IOWR(DRM_COMMAND_BASE + \
+		0x10, struct drm_mode_atomic)
 
 #endif /* _MESON_DRM_H */

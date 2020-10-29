@@ -417,7 +417,6 @@ static int kms_post_buf(struct drm_display *drm_disp, struct drm_buf *buf)
 {
     int ret;
     drmModeAtomicReqPtr request;
-    uint32_t blob_id;
     uint32_t flags = DRM_MODE_ATOMIC_NONBLOCK;
     struct kms_display *disp = to_kms_display(drm_disp);
 
@@ -428,17 +427,17 @@ static int kms_post_buf(struct drm_display *drm_disp, struct drm_buf *buf)
     conn_state = disp->conn_states[0];
     crtc_state = disp->crtc_states[0];
 
-    if (buf->flags | MESON_USE_VD1)
+    if (buf->flags & MESON_USE_VD1)
         plane_state = disp->vid_states[0];
-    else if (buf->flags | MESON_USE_VD2)
+    else if (buf->flags & MESON_USE_VD2)
         plane_state = disp->vid_states[1];
     else
         plane_state = disp->osd_states[0];
 
     request = drmModeAtomicAlloc();
 
+#if 0
     if (!disp->mode_set) {
-
         flags |= DRM_MODE_ATOMIC_ALLOW_MODESET;
         drmModeAtomicAddProperty(request, conn_state->id, conn_state->crtc_id.id, crtc_state->id);
 
@@ -451,6 +450,9 @@ static int kms_post_buf(struct drm_display *drm_disp, struct drm_buf *buf)
 
         disp->mode_set = 1;
     }
+#else
+    /*No modeset needed in post buf, modeset will control by systemservice.*/
+#endif
 
     drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_x.id, 0);
     drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_y.id, 0);
@@ -478,7 +480,8 @@ static int kms_post_buf(struct drm_display *drm_disp, struct drm_buf *buf)
     else
         drmModeAtomicAddProperty(request, crtc_state->id, crtc_state->out_fence.id, VOID2U64(&buf->fence_fd));
 #endif
-    ret = drmModeAtomicCommit(drm_disp->drm_fd, request, flags, NULL);
+
+    ret = drmModeAsyncAtomicCommit(drm_disp->drm_fd, request, flags, NULL);
     if (ret < 0) {
         fprintf(stderr, "Unable to flip page: %s\n", strerror(errno));
         goto error;
