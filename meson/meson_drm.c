@@ -144,7 +144,7 @@ int meson_bo_dmabuf(struct meson_bo *bo)
     if (!bo->fd) {
         struct drm_prime_handle req = {
             .handle = bo->handle,
-            .flags = DRM_CLOEXEC,
+            .flags = DRM_CLOEXEC | DRM_RDWR,
         };
 
         int ret;
