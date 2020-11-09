@@ -454,8 +454,8 @@ static int kms_post_buf(struct drm_display *drm_disp, struct drm_buf *buf)
     /*No modeset needed in post buf, modeset will control by systemservice.*/
 #endif
 
-    drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_x.id, 0);
-    drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_y.id, 0);
+    drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_x.id, buf->crtc_x);
+    drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_y.id, buf->crtc_y);
     if (buf->crtc_w == 0) {
         drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_w.id, conn_state->mode.hdisplay);
     } else {
@@ -468,8 +468,8 @@ static int kms_post_buf(struct drm_display *drm_disp, struct drm_buf *buf)
         drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_h.id, buf->crtc_h);
     }
 
-    drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_x.id, 0);
-    drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_y.id, 0);
+    drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_x.id, buf->src_x);
+    drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_y.id, buf->src_y);
     drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_w.id, buf->width << 16);
     drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_h.id, buf->height << 16);
     drmModeAtomicAddProperty(request, plane_state->id, plane_state->fb_id.id, buf->fb_id);
