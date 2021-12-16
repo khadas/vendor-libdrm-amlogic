@@ -6,7 +6,9 @@
  * Free Software Foundation;  either version 2 of the  License, or (at your
  * option) any later version.
  */
-
+#include <poll.h>
+#include <sys/ioctl.h>
+#include "dma-buf.h"
 #include "meson_drm_util.h"
 
 struct drm_display *drm_kms_init(void);
@@ -79,4 +81,46 @@ int drm_free_buf(struct drm_buf *buf)
 int drm_post_buf(struct drm_display *disp, struct drm_buf *buf)
 {
     return disp->post_buf(disp, buf);
+}
+
+int drm_waitvideoFence( int dmabuffd )
+{
+    struct dma_buf_export_sync_file dma_fence;
+    int rc = -1;
+
+    if (dmabuffd <= 0)
+        return;
+
+    memset (&dma_fence, 0, sizeof(dma_fence));
+    dma_fence.flags |= DMA_BUF_SYNC_READ;
+    rc = ioctl(dmabuffd, DMA_BUF_IOCTL_EXPORT_SYNC_FILE, &dma_fence);
+    if (!rc && dma_fence.fd >= 0 )
+    {
+        struct pollfd pfd;
+
+        pfd.fd= dma_fence.fd;
+        pfd.events= POLLIN;
+        pfd.revents= 0;
+
+        for ( ; ; ) {
+            rc= poll( &pfd, 1, 3000);
+            if ( (rc == -1) && ((errno == EINTR) || (errno == EAGAIN)) )
+            {
+                continue;
+            }
+            else if ( rc <= 0 )
+            {
+                if ( rc == 0 ) errno= ETIME;
+                fprintf(stderr, "wait out video fence failed: fd %d errno %d\n", dma_fence.fd, errno);
+            }
+            else if(pfd.revents & (POLLNVAL | POLLERR)) {
+                fprintf(stderr, "waiting on video fence fd %d, revents error\n", dma_fence.fd);
+            }
+            break;
+        }
+        close( dma_fence.fd );
+        dma_fence.fd= -1;
+    }
+
+    return rc;
 }

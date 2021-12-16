@@ -100,4 +100,6 @@ int drm_post_buf(struct drm_display *disp, struct drm_buf *buf);
 int drmModeAsyncAtomicCommit(int fd, drmModeAtomicReqPtr req,
                                    uint32_t flags, void *user_data);
 
+int drm_waitvideoFence( int dmabuffd);
+
 #endif
