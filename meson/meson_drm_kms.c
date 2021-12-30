@@ -470,8 +470,8 @@ static int kms_post_buf(struct drm_display *drm_disp, struct drm_buf *buf)
 
     drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_x.id, buf->src_x << 16);
     drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_y.id, buf->src_y << 16);
-    drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_w.id, buf->width << 16);
-    drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_h.id, buf->height << 16);
+    drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_w.id, buf->src_w << 16);
+    drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_h.id, buf->src_h << 16);
     drmModeAtomicAddProperty(request, plane_state->id, plane_state->fb_id.id, buf->fb_id);
     drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_id.id, crtc_state->id);
 #if 0
