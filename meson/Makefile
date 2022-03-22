@@ -60,6 +60,8 @@ install:
 	install -m 0644 libdrm_meson.so $(TARGET_DIR)/usr/lib
 	install -m 755 meson_drm_test $(TARGET_DIR)/usr/bin/
 	install -m 755 meson_drm_display_test $(TARGET_DIR)/usr/bin/
+	cp meson_drmif.h $(STAGING_DIR)/usr/include/
+	cp meson_drm_util.h $(STAGING_DIR)/usr/include/
 
 
 uninstall:
