@@ -42,6 +42,7 @@ BUILD_TARGETS = libdrm_meson.so meson_drm_test  meson_drm_display_test
 libdrm_meson.so: $(meson_drm_SRCS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -g -D_FILE_OFFSET_BITS=64 -Wall  \
 	-shared -fPIC -o $@ $^ $(LDLIBS)
+	cp -f libdrm_meson.so  $(STAGING_DIR)/usr/lib/
 
 meson_drm_test: $(meson_drm_test_SRCS) libdrm_meson.so
 	$(CC) $(CFLAGS)  -I$(meson_drm_HEADERS) -L$(LOCAL_PATH) \
