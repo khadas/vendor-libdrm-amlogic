@@ -67,6 +67,7 @@ struct drm_display {
 
     size_t nbuf;
     struct drm_buf *bufs;
+	int alloc_only;
 
     void (*destroy_display)(struct drm_display *disp);
     int (*alloc_bufs)(struct drm_display *disp, int num, struct drm_buf_metadata *info);
@@ -88,6 +89,8 @@ struct drm_display *drm_display_init(void);
 void drm_destroy_display(struct drm_display *disp);
 void drm_display_register_done_cb(struct drm_display *disp, void *func, void *priv);
 void drm_display_register_res_cb(struct drm_display *disp, void *func, void *priv);
+/*for non-root process, the renderD128 can used to do some ioctl, except display related ioctl*/
+int drm_set_alloc_only_flag(struct drm_display *disp, int flag);
 
 int drm_alloc_bufs(struct drm_display *disp, int num, struct drm_buf_metadata *info);
 int drm_free_bufs(struct drm_display *disp);

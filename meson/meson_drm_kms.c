@@ -175,7 +175,7 @@ static struct meson_bo *alloc_bo(struct drm_display *drm_disp, struct drm_buf *b
     struct meson_bo *bo;
 
     size = width * height * bpp / 8;
-    bo = meson_bo_create(drm_disp->dev, size, buf->flags);
+    bo = meson_bo_create(drm_disp->dev, size, buf->flags, drm_disp->alloc_only);
     if (bo) {
         *bo_handle = meson_bo_handle(bo);
         *pitch = width * bpp / 8;
@@ -201,7 +201,7 @@ static int alloc_bos(struct drm_display *drm_disp, struct drm_buf *buf, uint32_t
         }
 
         buf->size = width * height * 4;
-        buf->fd[0] = meson_bo_dmabuf(buf->bos[0]);
+        buf->fd[0] = meson_bo_dmabuf(buf->bos[0], drm_disp->alloc_only);
         break;
     case DRM_FORMAT_UYVY:
     case DRM_FORMAT_YUYV:
@@ -213,7 +213,7 @@ static int alloc_bos(struct drm_display *drm_disp, struct drm_buf *buf, uint32_t
         }
 
         buf->size = width * height * 2;
-        buf->fd[0] = meson_bo_dmabuf(buf->bos[0]);
+        buf->fd[0] = meson_bo_dmabuf(buf->bos[0], drm_disp->alloc_only);
         buf->commit_to_video = 1;
         break;
     case DRM_FORMAT_NV12:
@@ -225,14 +225,14 @@ static int alloc_bos(struct drm_display *drm_disp, struct drm_buf *buf, uint32_t
             return -1;
         }
 
-        buf->fd[0] = meson_bo_dmabuf(buf->bos[0]);
+        buf->fd[0] = meson_bo_dmabuf(buf->bos[0], drm_disp->alloc_only);
 
         buf->bos[1] = alloc_bo(drm_disp, buf, 16, width/2, height/2, &bo_handles[1], &buf->pitches[1]);
         if (!buf->bos[1]) {
             fprintf(stderr, "alloc_bo argb888 fail\n");
             return -1;
         }
-        buf->fd[1] = meson_bo_dmabuf(buf->bos[1]);
+        buf->fd[1] = meson_bo_dmabuf(buf->bos[1], drm_disp->alloc_only);
         buf->size = width * height * 3 / 2;
         buf->commit_to_video = 1;
         break;
@@ -289,6 +289,10 @@ static struct drm_buf *kms_alloc_buf(struct drm_display *drm_disp, struct drm_bu
         free(buf);
         return NULL;
     }
+
+	/*for non-root users, just need alloc buf and don't need to add framebuffer*/
+	if (drm_disp->alloc_only)
+		return buf;
 
     ret = add_framebuffer(drm_disp->drm_fd, buf, bo_handles, DRM_FORMAT_MOD_NONE);
     if (ret) {
@@ -703,7 +707,7 @@ error:
 static int drm_kms_init_resource(struct kms_display *disp)
 {
     int ret;
-    int drm_fd;
+    int drm_fd, render_fd;
     drmModeRes *resources;
 
     drm_fd = open("/dev/dri/card0", O_RDWR | O_CLOEXEC);
@@ -713,8 +717,15 @@ static int drm_kms_init_resource(struct kms_display *disp)
         return -1;
     }
 
+    render_fd = open("/dev/dri/renderD128", O_RDWR | O_CLOEXEC);
+    if (render_fd < 0) {
+        fprintf(stderr, "Unable to open renderD128 node: %s\n",
+               strerror(errno));
+        return -1;
+    }
+
     disp->base.drm_fd = drm_fd;
-    disp->base.dev = meson_device_create(drm_fd);
+    disp->base.dev = meson_device_create(drm_fd, render_fd);
     if (!disp->base.dev) {
         fprintf(stderr, "meson_device_create fail\n");
         goto error3;
@@ -784,6 +795,7 @@ struct drm_display *drm_kms_init(void)
     base->import_buf = kms_import_buf;
     base->free_buf = kms_free_buf;
     base->post_buf = kms_post_buf;
+	base->alloc_only = 0;
 
     ret = drm_kms_init_resource(display);
     if (ret) {

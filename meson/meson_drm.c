@@ -31,7 +31,7 @@
  *
  * if true, returen the device object else NULL.
  */
-struct meson_device *meson_device_create(int fd)
+struct meson_device *meson_device_create(int fd, int render_fd)
 {
     struct meson_device *dev;
 
@@ -43,6 +43,7 @@ struct meson_device *meson_device_create(int fd)
     }
 
     dev->fd = fd;
+	dev->render_fd = render_fd;
 
     return dev;
 }
@@ -68,8 +69,10 @@ void meson_device_destroy(struct meson_device *dev)
  *
  *  if true, return a meson buffer object else NULL.
  */
-struct meson_bo *meson_bo_create(struct meson_device *dev, size_t size, uint32_t flags)
+struct meson_bo *meson_bo_create(struct meson_device *dev, size_t size,
+		uint32_t flags, int alloc_only)
 {
+	int fd;
     struct meson_bo *bo;
     struct drm_meson_gem_create req = {
         .size = size,
@@ -89,8 +92,9 @@ struct meson_bo *meson_bo_create(struct meson_device *dev, size_t size, uint32_t
     }
 
     bo->dev = dev;
+	fd = alloc_only ? dev->render_fd : dev->fd;
 
-    if (drmIoctl(dev->fd, DRM_IOCTL_MESON_GEM_CREATE, &req)) {
+    if (drmIoctl(fd, DRM_IOCTL_MESON_GEM_CREATE, &req)) {
         fprintf(stderr, "failed to create gem object[%s].\n",
                 strerror(errno));
         goto err_free_bo;
@@ -139,8 +143,11 @@ uint32_t meson_bo_handle(struct meson_bo *bo)
     return bo->handle;
 }
 
-int meson_bo_dmabuf(struct meson_bo *bo)
+int meson_bo_dmabuf(struct meson_bo *bo, int alloc_only)
 {
+	int fd;
+
+	fd = alloc_only ? bo->dev->render_fd : bo->dev->fd;
     if (!bo->fd) {
         struct drm_prime_handle req = {
             .handle = bo->handle,
@@ -149,7 +156,7 @@ int meson_bo_dmabuf(struct meson_bo *bo)
 
         int ret;
 
-        ret = drmIoctl(bo->dev->fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &req);
+        ret = drmIoctl(fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &req);
         if (ret)
             return ret;
 

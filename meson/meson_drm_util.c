@@ -35,6 +35,11 @@ void drm_display_register_res_cb(struct drm_display *disp, void *func, void *pri
     disp->reso_priv = priv;
 }
 
+int drm_set_alloc_only_flag(struct drm_display *disp, int flag)
+{
+    disp->alloc_only = flag;
+}
+
 int drm_alloc_bufs(struct drm_display *disp, int num, struct drm_buf_metadata *info)
 {
     int ret;
