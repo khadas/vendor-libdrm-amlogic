@@ -117,19 +117,20 @@ static void kms_destroy_display(struct drm_display *drm_disp)
 
 static int free_buf(struct drm_display *drm_disp, struct drm_buf *buf)
 {
-    int i, ret;
+    int i, fd, ret;
     struct drm_mode_destroy_dumb destroy_dumb;
 
     for ( i = 0; i < buf->nbo; i++)
         close(buf->fd[i]);
 
+	fd = drm_disp->alloc_only ? drm_disp->dev->render_fd : drm_disp->dev->fd;
     drmModeRmFB(drm_disp->drm_fd, buf->fb_id);
     memset(&destroy_dumb, 0, sizeof(destroy_dumb));
 
     for ( i = 0; i < buf->nbo; i++) {
         destroy_dumb.handle = meson_bo_handle(buf->bos[i]);
 
-        ret = drmIoctl(drm_disp->drm_fd, DRM_IOCTL_MODE_DESTROY_DUMB, &destroy_dumb);
+        ret = drmIoctl(fd, DRM_IOCTL_MODE_DESTROY_DUMB, &destroy_dumb);
         if (ret < 0) {
             /* If handle was from drmPrimeFDToHandle, then fd is connected
              * as render, we have to use drm_gem_close to release it.
@@ -137,7 +138,7 @@ static int free_buf(struct drm_display *drm_disp, struct drm_buf *buf)
             if (errno == EACCES) {
                 struct drm_gem_close close_req;
                 close_req.handle = destroy_dumb.handle;
-                ret = drmIoctl(drm_disp->drm_fd, DRM_IOCTL_GEM_CLOSE, &close_req);
+                ret = drmIoctl(fd, DRM_IOCTL_GEM_CLOSE, &close_req);
                 if (ret < 0) {
                     fprintf(stderr, "Unable to destroy buffer: %s\n",
                             strerror(errno));
