@@ -6,7 +6,7 @@
  *
  * Description:
  */
-#include<string.h>
+#include <string.h>
 #include "libdrm_meson_connector.h"
 struct mesonConnector {
 int type;

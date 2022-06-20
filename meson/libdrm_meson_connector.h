@@ -22,6 +22,17 @@ extern "C" {
 #define MESON_DRM_HDMITX_PROP_EOTF  "EOTF"
 #define DRM_CONNECTOR_PROP_CONTENT_PROTECTION "Content Protection"
 #define DRM_CONNECTOR_PROP_CONTENT_TYPE       "HDCP Content Type"
+#define DRM_CONNECTOR_PROP_RX_HDCP_SUPPORTED_VER       "hdcp_ver"
+#define DRM_CONNECTOR_PROP_RX_HDR_CAP       "hdr_cap"
+#define DRM_CONNECTOR_PROP_RX_DV_CAP       "dv_cap"
+#define DRM_CONNECTOR_PROP_TX_HDR_MODE       "hdmi_hdr_status"
+#define DRM_CONNECTOR_PROP_TX_HDCP_AUTH_MODE       "hdcp_mode"
+#define DRM_CONNECTOR_PROP_TX_HDR_POLICY       "meson.crtc.hdr_policy"
+#define DRM_CONNECTOR_PROP_TX_ASPECT_RATIO       "aspect_ratio"
+#define DRM_CONNECTOR_PROP_GETTX_AR_VALUE       "aspect_ratio_value"
+#define DRM_CONNECTOR_PROP_HDCP_PRIORITY       "HDCP_CONTENT_TYPE0_PRIORITY"
+
+
 struct mesonConnector;
 struct mesonConnector *mesonConnectorCreate(int drmFd, int type);
 int mesonConnectorUpdate(int drmFd, struct mesonConnector *connector);

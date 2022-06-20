@@ -137,24 +137,36 @@ static int meson_drm_setprop(uint32_t obj_id, char* prop_name, int prop_value )
 {
 	int ret = -1;
 	printf(" meson_drm_setprop: obj_id %d, prop_name: %s, prop_value:%d\n",obj_id, prop_name,prop_value);
-
+	char* xdgRunDir = getenv("XDG_RUNTIME_DIR");
+	if (!xdgRunDir)
+		xdgRunDir = XDG_RUNTIME_DIR;
 	if (prop_name) {
-		char cmdBuf[512] = {'\0'};
-		snprintf(cmdBuf, sizeof(cmdBuf)-1, "export XDG_RUNTIME_DIR=%s;westeros-gl-console set property -s %d:%s:%d | grep \"Response\"",
-				XDG_RUNTIME_DIR, obj_id, prop_name, prop_value);
-		printf("Executing '%s'\n", cmdBuf);
-		FILE* fp = popen(cmdBuf, "r");
-		if (NULL != fp) {
-			char output[64] = {'\0'};
-			while (fgets(output, sizeof(output)-1, fp)) {
-				if (strlen(output) && strstr(output, "[0:")) {
-					ret = 0;
+
+		do {
+			char cmdBuf[512] = {'\0'};
+			snprintf(cmdBuf, sizeof(cmdBuf)-1, "export XDG_RUNTIME_DIR=%s;westeros-gl-console set property -s %d:%s:%d | grep \"Response\"",
+					xdgRunDir, obj_id, prop_name, prop_value);
+			printf("Executing '%s'\n", cmdBuf);
+			FILE* fp = popen(cmdBuf, "r");
+			if (NULL != fp) {
+				char output[64] = {'\0'};
+				while (fgets(output, sizeof(output)-1, fp)) {
+					if (strlen(output) && strstr(output, "[0:")) {
+						ret = 0;
+					}
 				}
+				pclose(fp);
+			} else {
+				printf("meson_drm_setprop: popen failed\n");
 			}
-			pclose(fp);
-		} else {
-			printf("meson_drm_setprop: popen failed\n");
-		}
+			if (ret != 0 ) {
+				if (strcmp(xdgRunDir, XDG_RUNTIME_DIR) == 0) {
+					printf("meson_drm_setprop: failed !!\n");
+					break;
+				}
+				xdgRunDir = XDG_RUNTIME_DIR;
+			}
+		} while (ret != 0);
 	}
 	return ret;
 }

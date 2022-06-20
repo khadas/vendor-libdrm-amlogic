@@ -7,7 +7,7 @@ ifeq "$(IS_GCC_ABOVE_MIN_VERSION)" "1"
 CFLAGS += -std=gnu++20
 endif
 
-LDFLAGS += -Wl,--no-as-needed -lstdc++ -lpthread  -ldl -lrt -L$(STAGING_DIR)/usr/lib
+LDFLAGS += -Wl,--no-as-needed -lstdc++ -lpthread  -ldl -lrt -ludev -L$(STAGING_DIR)/usr/lib
 CFLAGS += -Wall -Wno-unknown-pragmas -Wno-format -Wno-format-security -Wno-error=unused-result \
           -O3 -fexceptions -fnon-call-exceptions -D_GNU_SOURCE -I$(STAGING_DIR)/usr/include
 CFLAGS += -I$(STAGING_DIR)/usr/include/ -I$(STAGING_DIR)/usr/include/libdrm/
@@ -19,10 +19,13 @@ meson_drm_SRCS = \
   $(LOCAL_PATH)/meson_drm_async_commit.c \
   $(LOCAL_PATH)/meson_drm_kms.c  \
   $(LOCAL_PATH)/meson_drm_util.c  \
+  $(LOCAL_PATH)/meson_drm_display.c  \
+  $(LOCAL_PATH)/meson_drm_event.c  \
+
   $(NULL)
 
 meson_drm_HEADERS = \
-	$(LOCAL_PATH)\
+	$(LOCAL_PATH) \
 	$(NULL)
 
 meson_drm_test_SRCS  = \
@@ -30,8 +33,7 @@ meson_drm_test_SRCS  = \
 	$(NULL)
 
 meson_drm_display_test_SRCS  = \
-	$(LOCAL_PATH)/meson_sample/meson_drm_display_test.c \
-	$(LOCAL_PATH)/meson_sample/meson_drm_display.c  \
+	$(LOCAL_PATH)/meson_drm_display_test.c \
 	$(NULL)
 # ---------------------------------------------------------------------
 #  Build rules
