@@ -23,7 +23,7 @@
 #define LIBUDEV_EVT_TYPE_KERNEL     "kernel"
 #define LIBUDEV_SUBSYSTEM_DRM       "drm"
 
-static pthread_t event_monitor_threadId;
+//static pthread_t event_monitor_threadId;
 static bool isMonitoringAlive = false;
 displayEventCallback _DisplayEventCb = NULL;
 static void* uevent_monitor_thread(void *arg);
@@ -70,12 +70,10 @@ bool get_hdcp_status(ENUM_HDCP_STATUS *status)
 static void* uevent_monitor_thread(void *arg)
 {
     printf("[%s:%d]start\n", __FUNCTION__, __LINE__);
-    bool isConnected = false;
     bool wasConnected = false;
     struct udev *udev = NULL;
     struct udev_device *dev = NULL;
     struct udev_monitor *mon = NULL;
-    bool drmInit = false;
     ENUM_MESON_DRM_CONNECTION enConnection = MESON_DRM_UNKNOWNCONNECTION;
     ENUM_MESON_DRM_CONNECTION enPreConnection = MESON_DRM_UNKNOWNCONNECTION;
     ENUM_DISPLAY_EVENT enDisplayEvent = DISPLAY_EVENT_MAX;

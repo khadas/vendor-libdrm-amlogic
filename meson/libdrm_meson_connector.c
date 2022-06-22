@@ -250,14 +250,14 @@ int mesonConnectorGetCRTCId(struct mesonConnector* connector)
 }
 drmModeModeInfo* mesonConnectorGetCurMode(int drmFd, struct mesonConnector* connector)
 {
-	drmModeConnector *conn_cur= NULL;
 	drmModeModeInfo* mode = NULL;
+	drmModeCrtcPtr crtc;
 	mode = (drmModeModeInfo*)calloc(1, sizeof(drmModeModeInfo));
-	conn_cur = drmModeGetConnectorCurrent(drmFd, connector->id);
-	if (conn_cur && mode) {
-		memcpy(mode, conn_cur->modes, sizeof(drmModeModeInfo));
+	crtc = drmModeGetCrtc(drmFd, connector->crtc_id);
+	if (crtc && mode) {
+		memcpy(mode, &crtc->mode, sizeof(drmModeModeInfo));
 	}
-	drmModeFreeConnector(conn_cur);
+	drmModeFreeCrtc(crtc);
 	return mode;
 }
 

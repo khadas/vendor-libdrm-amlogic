@@ -33,16 +33,18 @@ int main(void )
     scanf("%d",&select_s_g);
     if (select_s_g == 1) {
         printf("get value:1->HDMI enable 2->mode 3->EOTF value 4->Content Protection 5->HDCP version 6->HDR_POLICY 7->HDMI connected 8->Rx supported modes 9->prefer mode 10->edid\n"
-			   "11->Rx supported HDCP versions 12->Rx supported HDR modes 13->tx Cur HDR mode 14->HDCP auth mode 15->get current aspect ratio value\n ");
+               "11->Rx supported HDCP versions 12->Rx supported HDR modes 13->tx Cur HDR mode 14->HDCP auth mode 15->get current aspect ratio value 16->dv enable 17->vblank time\n ");
         int get = 0;
         scanf("%d", &get);
         if (get == 1) {
             meson_drm_get_prop(ENUM_DRM_PROP_HDMI_ENABLE, &value);
             printf("\n get HDMI enable:%d\n", value);
         } else if (get == 2) {
-            char* video_format = meson_drm_getMode();
-            printf("\n get HDMI :%s\n", video_format);
-            free(video_format);
+            DisplayMode mode;
+            if (meson_drm_getMode(&mode) == 0) {
+                printf("\n mode (%d %d %d %d)\n",mode.w, mode.h, mode.vrefresh, mode.interlace);
+        }
+
         } else if (get == 3) {
             meson_drm_get_prop(ENUM_DRM_PROP_HDMITX_EOTF, &value);
             printf("\n EOTF:%d\n",value);
@@ -59,7 +61,7 @@ int main(void )
         } else if (get == 7) {
             printf("\n HDMI connected:%d\n",meson_drm_getConnection());
         } else if (get == 8) {
-            DisplayMoode* modes = NULL;
+            DisplayMode* modes = NULL;
             int count = 0;
             if (0 == meson_drm_getRxSurportedModes( &modes, &count )) {
                 printf("\n mode count:%d\n",count);
@@ -73,7 +75,7 @@ int main(void )
                  printf("\n %s fail\n",__FUNCTION__);
             }
         } else if (get == 9) {
-            DisplayMoode mode;
+            DisplayMode mode;
             if (0 == meson_drm_getRxPreferredMode(&mode)) {
                 printf(" (%s %d %d %d)\n", mode.name, mode.w, mode.h, mode.interlace);
             } else {
@@ -149,12 +151,30 @@ int main(void )
             } else {
                 printf("\n meson_drm_get_prop fail\n");
             }
+        } else if (get == 16) {
+            if (0 == meson_drm_get_prop( ENUM_DRM_PROP_HDMI_DV_ENABLE, &value)) {
+                printf("\n meson_drm_get_prop DV enable:%d\n",value);
+            } else {
+                printf("\n meson_drm_get_prop fail\n");
+            }
+        } else if (get == 17) {
+            uint64_t vlankTime = 0;
+            uint64_t refreshInterval = 0;
+            int fd = meson_drm_open();
+            int nextVsync = 0;
+            printf("\n please input nextvsync value:\n");
+            scanf("%d", &nextVsync);
+            if (0 == meson_drm_get_vblank_time(fd, nextVsync, &vlankTime, &refreshInterval))
+                printf("\n meson_drm_get_prop vlankTime:%llu, refreshInterval:%llu\n",vlankTime, refreshInterval);
+            else
+                printf("\n meson_get_vblank_time fail\n");
+            meson_drm_close_fd(fd);
         }
         else {
             printf("\n invalid input\n");
         }
     } else if (select_s_g == 0) {
-        printf("get value:1->HDMI enable 2->mode 3->EOTF value 4->Content Protection 5->HDCP Version 6->HDR_POLICY 7->aspect ratio\n");
+        printf("get value:1->HDMI enable 2->mode 3->EOTF value 4->Content Protection 5->HDCP Version 6->HDR_POLICY 7->aspect ratio 8->dv enable\n");
         int set = 0;
         scanf("%d", &set);
         if (set == 1) {
@@ -165,11 +185,18 @@ int main(void )
                 printf("\n set HDMI enable success\n");
         } else if (set == 2) {
             printf("\n set video format\n");
-            int enable = 1;
-            getchar();
-            char video_format[30] = {0};
-            gets(video_format);
-            if (meson_drm_setMode( video_format ) == 0)
+
+            int w=0, h=0,refresh=0,interlace=0;
+            scanf("%d",&w);
+            scanf("%d",&h);
+            scanf("%d",&refresh);
+            scanf("%d",&interlace);
+            DisplayMode mode;
+            mode.w = w;
+            mode.h = h;
+            mode.vrefresh = refresh;
+            mode.interlace = interlace;
+            if (meson_drm_setMode( &mode ) == 0)
                 printf("\n set Video Format success\n");
 
         } else if (set == 3) {
@@ -226,6 +253,12 @@ int main(void )
             } else {
                 printf("\n get current aspect ratio value fail\n");
             }
+        } else if (set == 8) {
+            printf("\n DV enable:\n");
+            int enable =-1;
+            scanf("%d",&enable);
+             if (meson_drm_set_prop(ENUM_DRM_PROP_HDMI_DV_ENABLE, enable))
+                printf("\n set HDMI DV enable success\n");
         }
     }
     else {

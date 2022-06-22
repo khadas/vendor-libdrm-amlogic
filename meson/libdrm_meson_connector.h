@@ -31,6 +31,7 @@ extern "C" {
 #define DRM_CONNECTOR_PROP_TX_ASPECT_RATIO       "aspect_ratio"
 #define DRM_CONNECTOR_PROP_GETTX_AR_VALUE       "aspect_ratio_value"
 #define DRM_CONNECTOR_PROP_HDCP_PRIORITY       "HDCP_CONTENT_TYPE0_PRIORITY"
+#define DRM_CONNECTOR_PROP_DV_ENABLE       "dv_enable"
 
 
 struct mesonConnector;

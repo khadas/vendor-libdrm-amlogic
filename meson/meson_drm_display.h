@@ -51,16 +51,17 @@ typedef enum _ENUM_MESON_DRM_PROP{
     ENUM_DRM_PROP_GETRX_HDR_CAP,
     ENUM_DRM_PROP_GETTX_HDR_MODE,
     ENUM_DRM_PROP_HDMI_ASPECT_RATIO,
+    ENUM_DRM_PROP_HDMI_DV_ENABLE,
     ENUM_DRM_PROP_MAX
 } ENUM_MESON_DRM_PROP;
 
-typedef struct _DisplayMoode {
+typedef struct _DisplayMode {
     uint16_t w;
     uint16_t h;
     uint32_t vrefresh;
     bool interlace;
     char name[DRM_DISPLAY_MODE_LEN];
-} DisplayMoode;
+} DisplayMode;
 
 typedef enum _ENUM_MESON_DRM_HDR_MODE {
     MESON_DRM_HDR10PLUS      = 0,
@@ -79,15 +80,19 @@ typedef enum _ENUM_HDCP_VERSION {
     ENUM_HDCP_VERSION_MAX
 } ENUM_HDCP_VERSION;
 
-int meson_drm_setMode(char* videoFormat);
-char* meson_drm_getMode();
-int meson_drm_getRxPreferredMode( DisplayMoode* mode);
-int meson_drm_getRxSurportedModes( DisplayMoode** modes, int* modeCount );
+int meson_drm_setMode(DisplayMode* mode);
+int meson_drm_getMode(DisplayMode* mode);
+
+int meson_drm_getRxPreferredMode( DisplayMode* mode);
+int meson_drm_getRxSurportedModes( DisplayMode** modes, int* modeCount );
 int meson_drm_getEDID( int * data_Len, char **data);
 
 ENUM_MESON_DRM_CONNECTION meson_drm_getConnection();
 int meson_drm_set_prop( ENUM_MESON_DRM_PROP enProp, int prop_value );
 int meson_drm_get_prop( ENUM_MESON_DRM_PROP enProp, uint32_t* prop_value );
+int meson_drm_get_vblank_time(int drmFd, int nextVsync,uint64_t *vblankTime, uint64_t *refreshInterval);
+void meson_drm_close_fd(int drmFd);
+int meson_drm_open();
 
 #if defined(__cplusplus)
 }

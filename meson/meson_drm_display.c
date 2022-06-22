@@ -10,6 +10,9 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <errno.h>
+#include <xf86drm.h>
+#include <xf86drmMode.h>
 #include <linux/string.h>
 #include "libdrm_meson_connector.h"
 #include "libdrm_meson_property.h"
@@ -27,6 +30,7 @@ static int meson_drm_setprop(int obj_id, char* prop_name, int prop_value );
 static bool meson_drm_init();
 static void meson_drm_deinit();
 static uint32_t _getHDRSupportedList(uint64_t hdrlist, uint64_t dvlist);
+struct mesonConnector* get_current_connector(int drmFd);
 
 static int meson_drm_setprop(int obj_id, char* prop_name, int prop_value )
 {
@@ -70,7 +74,6 @@ static bool meson_drm_init()
 {
     bool ret = false;
     const char *card;
-    int drm_fd = -1;
     card= getenv("WESTEROS_DRM_CARD");
     if ( !card ) {
         card = DEFAULT_CARD;
@@ -127,21 +130,22 @@ static uint32_t _getHDRSupportedList(uint64_t hdrlist, uint64_t dvlist)
     return ret;
 }
 
-int meson_drm_setMode(char* mode)
+int meson_drm_setMode(DisplayMode* mode)
 {
     int ret = -1;
-	char cmdBuf[512] = {'\0'};
-	char output[64] = {'\0'};
-    printf(" meson_drm_setMode %s\n",mode);
+    char cmdBuf[512] = {'\0'};
+    char output[64] = {'\0'};
+    char modeSet[20] = {'\0'};
     char* xdgRunDir = getenv("XDG_RUNTIME_DIR");
     if (!xdgRunDir)
         xdgRunDir = XDG_RUNTIME_DIR;
     if (!mode) {
         ret = -1;
     } else {
+        sprintf(modeSet, "%dx%d%cx%d", mode->w, mode->h, mode->interlace ? 'i':'p',mode->vrefresh);
         do {
             snprintf(cmdBuf, sizeof(cmdBuf)-1, "export XDG_RUNTIME_DIR=%s;westeros-gl-console set mode %s | grep \"Response\"",
-                    xdgRunDir, mode);
+                    xdgRunDir, modeSet);
             printf("Executing '%s'\n", cmdBuf);
             /* FIXME: popen in use */
             FILE* fp = popen(cmdBuf, "r");
@@ -169,16 +173,19 @@ int meson_drm_setMode(char* mode)
     }
     return ret;
 }
-char* meson_drm_getMode()
+int meson_drm_getMode(DisplayMode* modeInfo)
 {
+    int ret = -1;
     char cmdBuf[512] = {'\0'};
     char output[64] = {'\0'};
     char* mode = NULL;
-    char* mode_name = NULL;
-    char* tok = NULL;
-    char* ctx;
-    char* xdgRunDir = getenv("XDG_RUNTIME_DIR");
     int temp = -1;
+    int w = 0, h = 0,refresh = 0;
+    char interlace = '\0';
+    char* xdgRunDir = getenv("XDG_RUNTIME_DIR");
+    if (modeInfo == NULL)
+        return ret;
+
     if (!xdgRunDir)
         xdgRunDir = XDG_RUNTIME_DIR;
     do {
@@ -191,13 +198,17 @@ char* meson_drm_getMode()
             while (fgets(output, sizeof(output)-1, fp)) {
                 if (strlen(output) && strstr(output, "[0:")) {
                     mode = strstr(output, "[0:");
-                    printf("\n  meson_drm_getMode:%s\n", mode);
-                    int len = strlen(mode);
-                    mode_name = (char*)calloc(len, sizeof(char));
-                    sscanf(mode, "[0: mode %s",mode_name);
-                    tok= strtok_r( mode_name, "]", &ctx );
-                    printf("\n  mode_name   :%s\n", tok);
+                    sscanf(mode, "[0: mode %dx%d%cx%d]",&w, &h, &interlace, &refresh);
+                    printf("\n mode: %dx%d%cx%d\n", w, h, interlace, refresh);
                     temp = 0;
+                    modeInfo->w = w;
+                    modeInfo->h = h;
+                    modeInfo->vrefresh = refresh;
+                    if (interlace == 'i')
+                        modeInfo->interlace = true;
+                    else
+                        modeInfo->interlace = false;
+                    ret = 0;
                 }
             }
             pclose(fp);
@@ -205,17 +216,17 @@ char* meson_drm_getMode()
             printf(" popen failed\n");
         }
         if (temp != 0 ) {
-                if (strcmp(xdgRunDir, XDG_RUNTIME_DIR) == 0) {
-                    printf("meson_drm_setprop: failed !!\n");
-                    break;
-                }
-                xdgRunDir = XDG_RUNTIME_DIR;
+            if (strcmp(xdgRunDir, XDG_RUNTIME_DIR) == 0) {
+                printf("meson_drm_setprop: failed !!\n");
+                break;
+            }
+            xdgRunDir = XDG_RUNTIME_DIR;
         }
     } while ( temp != 0 );
-    return tok;
+    return ret;
 }
 
-int meson_drm_getRxSurportedModes( DisplayMoode** modes, int* modeCount )
+int meson_drm_getRxSurportedModes( DisplayMode** modes, int* modeCount )
 {
     int ret = -1;
     if (!meson_drm_init()) {
@@ -227,7 +238,7 @@ int meson_drm_getRxSurportedModes( DisplayMoode** modes, int* modeCount )
     int i = 0;
     if (0 != mesonConnectorGetModes(s_conn_HDMI, s_drm_fd, &modeall, &count))
         goto out;
-    DisplayMoode* modestemp =  (DisplayMoode*)calloc(count, sizeof(DisplayMoode));
+    DisplayMode* modestemp =  (DisplayMode*)calloc(count, sizeof(DisplayMode));
     for (i = 0; i < count; i++)
     {
         modestemp[i].w = modeall[i].hdisplay;
@@ -243,7 +254,7 @@ out:
     meson_drm_deinit();
     return ret;
 }
-int meson_drm_getRxPreferredMode( DisplayMoode* mode)
+int meson_drm_getRxPreferredMode( DisplayMode* mode)
 {
     int ret = -1;
     int i = 0;
@@ -277,7 +288,6 @@ int meson_drm_getEDID( int * data_Len, char **data)
     int ret = -1;
     int i = 0;
     int count = 0;
-    drmModeModeInfo* modes = NULL;
     char* edid_data = NULL;
     if (!meson_drm_init()) {
         printf("\n drm card open fail\n");
@@ -382,6 +392,11 @@ int meson_drm_set_prop( ENUM_MESON_DRM_PROP enProp, int prop_value )
             sprintf( propName, "%s", DRM_CONNECTOR_PROP_TX_ASPECT_RATIO);
             break;
         }
+        case ENUM_DRM_PROP_HDMI_DV_ENABLE:
+        {
+            objID =  mesonConnectorGetCRTCId(s_conn_HDMI);
+            sprintf( propName, "%s", DRM_CONNECTOR_PROP_DV_ENABLE);
+        }
         default:
             break;
     }
@@ -482,6 +497,12 @@ int meson_drm_get_prop( ENUM_MESON_DRM_PROP enProp, uint32_t* prop_value )
             sprintf( propName, "%s", DRM_CONNECTOR_PROP_TX_ASPECT_RATIO);
             break;
         }
+        case ENUM_DRM_PROP_HDMI_DV_ENABLE:
+        {
+            objID =  mesonConnectorGetCRTCId(s_conn_HDMI);
+            objtype = DRM_MODE_OBJECT_CRTC;
+            sprintf( propName, "%s", DRM_CONNECTOR_PROP_DV_ENABLE);
+        }
         default:
             break;
     }
@@ -541,5 +562,75 @@ out:
     return ret;
 }
 
+int meson_drm_open()
+{
+    int ret_fd = -1;
+    const char *card;
+    card= getenv("WESTEROS_DRM_CARD");
+    if ( !card ) {
+        card = DEFAULT_CARD;
+    }
+    ret_fd = open(card, O_RDONLY|O_CLOEXEC);
+    if ( ret_fd < 0 )
+        printf("\n drm card:%s open fail\n",card);
+    return ret_fd;
+}
+struct mesonConnector* get_current_connector(int drmFd)
+{
+    struct mesonConnector* connectorHDMI = NULL;
+    struct mesonConnector* connectorTV = NULL;
+    int HDMIconnected = 0;
+    connectorHDMI = mesonConnectorCreate(drmFd, DRM_MODE_CONNECTOR_HDMIA);
+    HDMIconnected = mesonConnectorGetConnectState(connectorHDMI);
+    if (HDMIconnected == 1) {
+        return connectorHDMI;
+    } else {
+        connectorTV = mesonConnectorCreate(drmFd, DRM_MODE_CONNECTOR_LVDS);
+        return connectorTV;
+    }
+}
 
+void meson_drm_close_fd(int drmFd)
+{
+    if (drmFd >= 0)
+        close(s_drm_fd);
+}
+
+int meson_drm_get_vblank_time(int drmFd, int nextVsync,uint64_t *vblankTime, uint64_t *refreshInterval)
+{
+    int ret = -1;
+    int rc = -1;
+    struct mesonConnector* connector = NULL;
+    drmModeModeInfo* mode = NULL;
+    if (drmFd < 0) {
+        printf("\n drmFd error\n");
+        goto out;
+    }
+    if (nextVsync < 0)
+        nextVsync = 0;
+    connector = get_current_connector(drmFd);
+    if (connector != NULL ) {
+       mode = mesonConnectorGetCurMode(drmFd, connector);
+       if (mode) {
+           *refreshInterval = (1000000LL+(mode->vrefresh/2))/mode->vrefresh;
+           free(mode);
+           ret = 0;
+       }
+    }
+    drmVBlank vbl;
+    vbl.request.type= DRM_VBLANK_RELATIVE;
+    vbl.request.sequence= nextVsync;
+    vbl.request.signal= 0;
+    rc = drmWaitVBlank(drmFd, &vbl );
+    if (rc != 0 ) {
+        printf("drmWaitVBlank failed: rc %d errno %d",rc, errno);
+        goto out;
+    }
+    if ((rc == 0) && (vbl.reply.tval_sec > 0 || vbl.reply.tval_usec > 0)) {
+        *vblankTime = vbl.reply.tval_sec * 1000000LL + vbl.reply.tval_usec;
+    }
+out:
+    mesonConnectorDestroy(drmFd, connector);
+    return ret;
+}
 
