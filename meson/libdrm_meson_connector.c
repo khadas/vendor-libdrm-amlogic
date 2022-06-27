@@ -67,6 +67,10 @@ struct mesonConnector *mesonConnectorCreate(int drmFd, int type)
 		cur_encoder = drmModeGetEncoder(drmFd, ret->encoder_id);
 		if (cur_encoder)
 			ret->crtc_id = cur_encoder->crtc_id;
+		else {
+			printf("\n cur encoder not exit, get crtcs[0]:%d ",res->crtcs[0]);
+			ret->crtc_id = res->crtcs[0];
+		}
 		drmModeFreeEncoder(cur_encoder);
 		ret->count_modes = conn->count_modes;
 		if (ret->count_modes > 0) {
