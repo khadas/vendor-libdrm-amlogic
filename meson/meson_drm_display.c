@@ -23,12 +23,8 @@
 #ifndef XDG_RUNTIME_DIR
 #define XDG_RUNTIME_DIR     "/run"
 #endif
-static int s_drm_fd = -1;
-struct mesonConnector* s_conn_HDMI = NULL;
 
 static int meson_drm_setprop(int obj_id, char* prop_name, int prop_value );
-static bool meson_drm_init();
-static void meson_drm_deinit();
 static uint32_t _getHDRSupportedList(uint64_t hdrlist, uint64_t dvlist);
 struct mesonConnector* get_current_connector(int drmFd);
 
@@ -60,7 +56,6 @@ static int meson_drm_setprop(int obj_id, char* prop_name, int prop_value )
             }
             if (ret != 0 ) {
                 if (strcmp(xdgRunDir, XDG_RUNTIME_DIR) == 0) {
-                    printf("meson_drm_setprop: failed !!\n");
                     break;
                 }
                 xdgRunDir = XDG_RUNTIME_DIR;
@@ -70,38 +65,6 @@ static int meson_drm_setprop(int obj_id, char* prop_name, int prop_value )
     return ret;
 }
 
-static bool meson_drm_init()
-{
-    bool ret = false;
-    const char *card;
-    card= getenv("WESTEROS_DRM_CARD");
-    if ( !card ) {
-        card = DEFAULT_CARD;
-    }
-    s_drm_fd = open(card, O_RDONLY|O_CLOEXEC);
-    if ( s_drm_fd < 0 ) {
-        printf("\n drm card:%s open fail\n",card);
-        ret = false;
-        goto exit;
-    }
-    s_conn_HDMI = mesonConnectorCreate(s_drm_fd, DRM_MODE_CONNECTOR_HDMIA);
-    if ( !s_conn_HDMI ) {
-        printf("\n  create HDMI connector fail\n");
-        ret = false;
-        goto exit;
-    }
-    ret = true;
-exit:
-    return ret;
-}
-
-static void meson_drm_deinit()
-{
-    if (s_conn_HDMI)
-        mesonConnectorDestroy(s_drm_fd,s_conn_HDMI);
-    if (s_drm_fd >= 0 )
-        close(s_drm_fd);
-}
 static uint32_t _getHDRSupportedList(uint64_t hdrlist, uint64_t dvlist)
 {
     uint32_t ret = 0;
@@ -142,7 +105,7 @@ int meson_drm_setMode(DisplayMode* mode)
     if (!mode) {
         ret = -1;
     } else {
-        sprintf(modeSet, "%dx%d%cx%d", mode->w, mode->h, mode->interlace ? 'i':'p',mode->vrefresh);
+        sprintf(modeSet, "%dx%d%c%d", mode->w, mode->h, mode->interlace ? 'i':'p',mode->vrefresh);
         do {
             snprintf(cmdBuf, sizeof(cmdBuf)-1, "export XDG_RUNTIME_DIR=%s;westeros-gl-console set mode %s | grep \"Response\"",
                     xdgRunDir, modeSet);
@@ -164,7 +127,7 @@ int meson_drm_setMode(DisplayMode* mode)
             }
             if (ret != 0 ) {
                 if (strcmp(xdgRunDir, XDG_RUNTIME_DIR) == 0) {
-                    printf("meson_drm_setprop: failed !!\n");
+                    printf("meson_drm_setMode: failed !!\n");
                     break;
                 }
                 xdgRunDir = XDG_RUNTIME_DIR;
@@ -176,67 +139,54 @@ int meson_drm_setMode(DisplayMode* mode)
 int meson_drm_getMode(DisplayMode* modeInfo)
 {
     int ret = -1;
-    char cmdBuf[512] = {'\0'};
-    char output[64] = {'\0'};
-    char* mode = NULL;
-    int temp = -1;
-    int w = 0, h = 0,refresh = 0;
-    char interlace = '\0';
-    char* xdgRunDir = getenv("XDG_RUNTIME_DIR");
-    if (modeInfo == NULL)
+    struct mesonConnector* conn = NULL;
+    drmModeModeInfo* mode = NULL;
+    int drmFd = -1;
+    if (modeInfo == NULL) {
+        printf("\n %s %d modeInfo == NULL return\n",__FUNCTION__,__LINE__);
         return ret;
-
-    if (!xdgRunDir)
-        xdgRunDir = XDG_RUNTIME_DIR;
-    do {
-        snprintf(cmdBuf, sizeof(cmdBuf)-1, "export XDG_RUNTIME_DIR=%s;westeros-gl-console get mode | grep \"Response\"",
-                xdgRunDir);
-        printf("Executing '%s'\n", cmdBuf);
-        /* FIXME: popen in use */
-        FILE* fp = popen(cmdBuf, "r");
-        if (NULL != fp) {
-            while (fgets(output, sizeof(output)-1, fp)) {
-                if (strlen(output) && strstr(output, "[0:")) {
-                    mode = strstr(output, "[0:");
-                    sscanf(mode, "[0: mode %dx%d%cx%d]",&w, &h, &interlace, &refresh);
-                    printf("\n mode: %dx%d%cx%d\n", w, h, interlace, refresh);
-                    temp = 0;
-                    modeInfo->w = w;
-                    modeInfo->h = h;
-                    modeInfo->vrefresh = refresh;
-                    if (interlace == 'i')
-                        modeInfo->interlace = true;
-                    else
-                        modeInfo->interlace = false;
-                    ret = 0;
-                }
-            }
-            pclose(fp);
+    }
+    drmFd = meson_drm_open();
+    conn = mesonConnectorCreate(drmFd, DRM_MODE_CONNECTOR_HDMIA);
+    if ( conn ) {
+        mode = mesonConnectorGetCurMode(drmFd, conn);
+        if (mode) {
+            modeInfo->w = mode->hdisplay;
+            modeInfo->h = mode->vdisplay;
+            modeInfo->vrefresh = mode->vrefresh;
+            modeInfo->interlace = mode->flags & DRM_MODE_FLAG_INTERLACE;
+            strcpy(modeInfo->name, mode->name);
+            free(mode);
+            mode = NULL;
+            ret = 0;
         } else {
-            printf(" popen failed\n");
+            printf("\n %s %d mode get fail \n",__FUNCTION__,__LINE__);
         }
-        if (temp != 0 ) {
-            if (strcmp(xdgRunDir, XDG_RUNTIME_DIR) == 0) {
-                printf("meson_drm_setprop: failed !!\n");
-                break;
-            }
-            xdgRunDir = XDG_RUNTIME_DIR;
-        }
-    } while ( temp != 0 );
+    } else {
+        printf("\n %s %d conn create fail \n",__FUNCTION__,__LINE__);
+    }
+    if (conn)
+        mesonConnectorDestroy(drmFd,conn);
+    if (drmFd >= 0 )
+        close(drmFd);
     return ret;
 }
 
 int meson_drm_getRxSurportedModes( DisplayMode** modes, int* modeCount )
 {
     int ret = -1;
-    if (!meson_drm_init()) {
-        printf("\n drm card open fail\n");
-        goto out;
+    int drmFd = -1;
+    struct mesonConnector* conn = NULL;
+    drmFd = meson_drm_open();
+    conn = mesonConnectorCreate(drmFd, DRM_MODE_CONNECTOR_HDMIA);
+    if (conn == NULL || drmFd < 0)
+    {
+        printf("\n%s %d connector create fail\n",__FUNCTION__,__LINE__);
     }
     drmModeModeInfo* modeall = NULL;
     int count = 0;
     int i = 0;
-    if (0 != mesonConnectorGetModes(s_conn_HDMI, s_drm_fd, &modeall, &count))
+    if (0 != mesonConnectorGetModes(conn, drmFd, &modeall, &count))
         goto out;
     DisplayMode* modestemp =  (DisplayMode*)calloc(count, sizeof(DisplayMode));
     for (i = 0; i < count; i++)
@@ -251,7 +201,10 @@ int meson_drm_getRxSurportedModes( DisplayMode** modes, int* modeCount )
     *modes = modestemp;
     ret = 0;
 out:
-    meson_drm_deinit();
+    if (conn)
+        mesonConnectorDestroy(drmFd,conn);
+    if (drmFd >= 0 )
+        close(drmFd);
     return ret;
 }
 int meson_drm_getRxPreferredMode( DisplayMode* mode)
@@ -260,11 +213,16 @@ int meson_drm_getRxPreferredMode( DisplayMode* mode)
     int i = 0;
     int count = 0;
     drmModeModeInfo* modes = NULL;
-    if (!meson_drm_init()) {
-        printf("\n drm card open fail\n");
-        goto out;
+    int drmFd = -1;
+    struct mesonConnector* conn = NULL;
+    drmFd = meson_drm_open();
+    conn = mesonConnectorCreate(drmFd, DRM_MODE_CONNECTOR_HDMIA);
+    if (conn == NULL || drmFd < 0)
+    {
+        printf("\n%s %d connector create fail\n",__FUNCTION__,__LINE__);
     }
-    if (0 != mesonConnectorGetModes(s_conn_HDMI, s_drm_fd, &modes, &count))
+
+    if (0 != mesonConnectorGetModes(conn, drmFd, &modes, &count))
         goto out;
     for (i = 0; i < count; i++)
     {
@@ -279,7 +237,10 @@ int meson_drm_getRxPreferredMode( DisplayMode* mode)
     }
     ret = 0;
 out:
-    meson_drm_deinit();
+    if (conn)
+        mesonConnectorDestroy(drmFd,conn);
+    if (drmFd >= 0 )
+        close(drmFd);
     return ret;
 }
 
@@ -289,11 +250,15 @@ int meson_drm_getEDID( int * data_Len, char **data)
     int i = 0;
     int count = 0;
     char* edid_data = NULL;
-    if (!meson_drm_init()) {
-        printf("\n drm card open fail\n");
-        goto out;
+    int drmFd = -1;
+    struct mesonConnector* conn = NULL;
+    drmFd = meson_drm_open();
+    conn = mesonConnectorCreate(drmFd, DRM_MODE_CONNECTOR_HDMIA);
+    if (conn == NULL || drmFd < 0)
+    {
+        printf("\n%s %d connector create fail\n",__FUNCTION__,__LINE__);
     }
-    if (0 != mesonConnectorGetEdidBlob(s_conn_HDMI, &count, &edid_data))
+    if (0 != mesonConnectorGetEdidBlob(conn, &count, &edid_data))
         goto out;
     char* edid =  (char*)calloc(count, sizeof(char));
     for (i = 0; i < count; i++)
@@ -304,7 +269,10 @@ int meson_drm_getEDID( int * data_Len, char **data)
     *data = edid;
     ret = 0;
 out:
-    meson_drm_deinit();
+    if (conn)
+        mesonConnectorDestroy(drmFd,conn);
+    if (drmFd >= 0 )
+        close(drmFd);
     return ret;
 }
 
@@ -317,20 +285,31 @@ int meson_drm_getRxSurportedEOTF(ENUM_DRM_HDMITX_PROP_EOTF* EOTFs)
 ENUM_MESON_DRM_CONNECTION meson_drm_getConnection()
 {
     ENUM_MESON_DRM_CONNECTION ret = MESON_DRM_UNKNOWNCONNECTION;
-    if (meson_drm_init()) {
+    int drmFd = -1;
+    struct mesonConnector* conn = NULL;
+    drmFd = meson_drm_open();
+    conn = mesonConnectorCreate(drmFd, DRM_MODE_CONNECTOR_HDMIA);
+    if (conn == NULL || drmFd < 0)
+    {
+        printf("\n%s %d connector create fail\n",__FUNCTION__,__LINE__);
+    }
+    if (conn) {
         int ConnectState = -1;
-        ConnectState = mesonConnectorGetConnectState(s_conn_HDMI);
+        ConnectState = mesonConnectorGetConnectState(conn);
         if (ConnectState == 1) {
             ret = MESON_DRM_CONNECTED;
         } else if (ConnectState == 2) {
             ret = MESON_DRM_DISCONNECTED;
         } else {
             ret = MESON_DRM_UNKNOWNCONNECTION;
-            meson_drm_deinit();
         }
     } else {
         printf("\n drm open fail\n");
     }
+    if (conn)
+        mesonConnectorDestroy(drmFd,conn);
+    if (drmFd >= 0 )
+        close(drmFd);
     return ret;
 }
 
@@ -344,34 +323,39 @@ int meson_drm_set_prop( ENUM_MESON_DRM_PROP enProp, int prop_value )
         printf("\n%s %d invalid para\n",__FUNCTION__,__LINE__);
         goto out;
     }
-    if (!meson_drm_init()) {
-        printf("\n drm card open fail\n");
+    int drmFd = -1;
+    struct mesonConnector* conn = NULL;
+    drmFd = meson_drm_open();
+    conn = mesonConnectorCreate(drmFd, DRM_MODE_CONNECTOR_HDMIA);
+    if (conn == NULL || drmFd < 0)
+    {
+        printf("\n%s %d connector create fail\n",__FUNCTION__,__LINE__);
         goto out;
     }
     switch (enProp)
     {
         case ENUM_DRM_PROP_HDMI_ENABLE:
         {
-            objID =  mesonConnectorGetId(s_conn_HDMI);
+            objID =  mesonConnectorGetId(conn);
             sprintf( propName, "%s", MESON_DRM_HDMITX_PROP_AVMUTE);
             prop_value = prop_value ? 0:1;
             break;
         }
         case ENUM_DRM_PROP_HDMITX_EOTF:
         {
-            objID =  mesonConnectorGetCRTCId(s_conn_HDMI);
+            objID =  mesonConnectorGetCRTCId(conn);
             sprintf( propName, "%s", MESON_DRM_HDMITX_PROP_EOTF);
             break;
         }
         case ENUM_DRM_PROP_CONTENT_PROTECTION:
         {
-            objID =  mesonConnectorGetId(s_conn_HDMI);
+            objID =  mesonConnectorGetId(conn);
             sprintf( propName, "%s", DRM_CONNECTOR_PROP_CONTENT_PROTECTION);
             break;
         }
         case ENUM_DRM_PROP_HDCP_VERSION:
         {
-            objID =  mesonConnectorGetId(s_conn_HDMI);
+            objID =  mesonConnectorGetId(conn);
             sprintf( propName, "%s", DRM_CONNECTOR_PROP_CONTENT_TYPE);
             if (ENUM_HDCP_VERSION_FORCE_1_4 == prop_value)
             {
@@ -382,19 +366,19 @@ int meson_drm_set_prop( ENUM_MESON_DRM_PROP enProp, int prop_value )
         }
         case ENUM_DRM_PROP_HDR_POLICY:
         {
-            objID =  mesonConnectorGetCRTCId(s_conn_HDMI);
+            objID =  mesonConnectorGetCRTCId(conn);
             sprintf( propName, "%s", DRM_CONNECTOR_PROP_TX_HDR_POLICY);
             break;
         }
         case ENUM_DRM_PROP_HDMI_ASPECT_RATIO:
         {
-            objID =  mesonConnectorGetId(s_conn_HDMI);
+            objID =  mesonConnectorGetId(conn);
             sprintf( propName, "%s", DRM_CONNECTOR_PROP_TX_ASPECT_RATIO);
             break;
         }
         case ENUM_DRM_PROP_HDMI_DV_ENABLE:
         {
-            objID =  mesonConnectorGetCRTCId(s_conn_HDMI);
+            objID =  mesonConnectorGetCRTCId(conn);
             sprintf( propName, "%s", DRM_CONNECTOR_PROP_DV_ENABLE);
         }
         default:
@@ -403,7 +387,7 @@ int meson_drm_set_prop( ENUM_MESON_DRM_PROP enProp, int prop_value )
     meson_drm_setprop(objID, propName, prop_value);
     if (enProp == ENUM_DRM_PROP_HDCP_VERSION)
     {
-        objID =  mesonConnectorGetId(s_conn_HDMI);
+        objID =  mesonConnectorGetId(conn);
         sprintf( propName, "%s", DRM_CONNECTOR_PROP_HDCP_PRIORITY);
         int priority = 0;
         if (force1_4)
@@ -412,9 +396,12 @@ int meson_drm_set_prop( ENUM_MESON_DRM_PROP enProp, int prop_value )
         }
         meson_drm_setprop(objID, propName, priority);
     }
-    meson_drm_deinit();
     ret = 0;
 out:
+    if (conn)
+        mesonConnectorDestroy(drmFd,conn);
+    if (drmFd >= 0 )
+        close(drmFd);
     return ret;
 }
 
@@ -428,86 +415,99 @@ int meson_drm_get_prop( ENUM_MESON_DRM_PROP enProp, uint32_t* prop_value )
         printf("\n%s %d invalid para\n",__FUNCTION__,__LINE__);
         goto out;
     }
-    if (!meson_drm_init()) {
-        printf("\n drm card open fail\n");
+    int drmFd = -1;
+    struct mesonConnector* conn = NULL;
+    drmFd = meson_drm_open();
+    conn = mesonConnectorCreate(drmFd, DRM_MODE_CONNECTOR_HDMIA);
+    if (conn == NULL || drmFd < 0)
+    {
+        printf("\n%s %d connector create fail\n",__FUNCTION__,__LINE__);
         goto out;
     }
     switch (enProp)
     {
         case ENUM_DRM_PROP_HDMI_ENABLE:
         {
-            objID =  mesonConnectorGetId(s_conn_HDMI);
+            objID =  mesonConnectorGetId(conn);
             objtype = DRM_MODE_OBJECT_CONNECTOR;
             sprintf( propName, "%s", MESON_DRM_HDMITX_PROP_AVMUTE);
             break;
         }
         case ENUM_DRM_PROP_HDMITX_EOTF:
         {
-            objID =  mesonConnectorGetCRTCId(s_conn_HDMI);
+            objID =  mesonConnectorGetCRTCId(conn);
             objtype = DRM_MODE_OBJECT_CRTC;
             sprintf( propName, "%s", MESON_DRM_HDMITX_PROP_EOTF);
             break;
         }
         case ENUM_DRM_PROP_CONTENT_PROTECTION:
         {
-            objID =  mesonConnectorGetId(s_conn_HDMI);
+            objID =  mesonConnectorGetId(conn);
             objtype = DRM_MODE_OBJECT_CONNECTOR;
             sprintf( propName, "%s", DRM_CONNECTOR_PROP_CONTENT_PROTECTION);
             break;
         }
         case ENUM_DRM_PROP_HDCP_VERSION:
         {
-            objID =  mesonConnectorGetId(s_conn_HDMI);
+            objID =  mesonConnectorGetId(conn);
             objtype = DRM_MODE_OBJECT_CONNECTOR;
             sprintf( propName, "%s", DRM_CONNECTOR_PROP_CONTENT_TYPE);
             break;
         }
         case ENUM_DRM_PROP_HDR_POLICY:
         {
-            objID =  mesonConnectorGetCRTCId(s_conn_HDMI);
+            objID =  mesonConnectorGetCRTCId(conn);
             sprintf( propName, "%s", DRM_CONNECTOR_PROP_TX_HDR_POLICY);
             objtype = DRM_MODE_OBJECT_CRTC;
             break;
         }
         case ENUM_DRM_PROP_GETRX_HDCP_SUPPORTED_VERS:
         {
-            objID =  mesonConnectorGetId(s_conn_HDMI);
+            objID =  mesonConnectorGetId(conn);
             objtype = DRM_MODE_OBJECT_CONNECTOR;
             sprintf( propName, "%s", DRM_CONNECTOR_PROP_RX_HDCP_SUPPORTED_VER);
             break;
         }
         case ENUM_DRM_PROP_GETRX_HDR_CAP:
         {
-            objID =  mesonConnectorGetId(s_conn_HDMI);
+            objID =  mesonConnectorGetId(conn);
             objtype = DRM_MODE_OBJECT_CONNECTOR;
             sprintf( propName, "%s", DRM_CONNECTOR_PROP_RX_HDR_CAP);
             break;
         }
         case ENUM_DRM_PROP_GETTX_HDR_MODE:
         {
-            objID =  mesonConnectorGetId(s_conn_HDMI);
+            objID =  mesonConnectorGetId(conn);
             objtype = DRM_MODE_OBJECT_CONNECTOR;
             sprintf( propName, "%s", DRM_CONNECTOR_PROP_TX_HDR_MODE);
             break;
         }
         case ENUM_DRM_PROP_HDMI_ASPECT_RATIO:
         {
-            objID =  mesonConnectorGetId(s_conn_HDMI);
+            objID =  mesonConnectorGetId(conn);
             objtype = DRM_MODE_OBJECT_CONNECTOR;
             sprintf( propName, "%s", DRM_CONNECTOR_PROP_TX_ASPECT_RATIO);
             break;
         }
         case ENUM_DRM_PROP_HDMI_DV_ENABLE:
         {
-            objID =  mesonConnectorGetCRTCId(s_conn_HDMI);
+            objID =  mesonConnectorGetCRTCId(conn);
             objtype = DRM_MODE_OBJECT_CRTC;
             sprintf( propName, "%s", DRM_CONNECTOR_PROP_DV_ENABLE);
+            break;
+        }
+        case ENUM_DRM_PROP_GETRX_HDCP_AUTHMODE:
+        {
+             objID =  mesonConnectorGetId(conn);
+             objtype = DRM_MODE_OBJECT_CONNECTOR;
+             sprintf( propName, "%s", DRM_CONNECTOR_PROP_TX_HDCP_AUTH_MODE);
+             break;
         }
         default:
             break;
     }
     struct mesonProperty* meson_prop = NULL;
-    meson_prop = mesonPropertyCreate(s_drm_fd, objID, objtype, propName);
+    meson_prop = mesonPropertyCreate(drmFd, objID, objtype, propName);
     if (!meson_prop) {
         printf("\n meson_prop create fail\n");
         goto out;
@@ -520,11 +520,11 @@ int meson_drm_get_prop( ENUM_MESON_DRM_PROP enProp, uint32_t* prop_value )
 
     if (enProp == ENUM_DRM_PROP_GETRX_HDR_CAP)
     {
-        objID =  mesonConnectorGetId(s_conn_HDMI);
+        objID =  mesonConnectorGetId(conn);
         objtype = DRM_MODE_OBJECT_CONNECTOR;
         sprintf( propName, "%s", DRM_CONNECTOR_PROP_RX_DV_CAP);
         struct mesonProperty* meson_prop_dv = NULL;
-        meson_prop_dv = mesonPropertyCreate(s_drm_fd, objID, objtype, propName);
+        meson_prop_dv = mesonPropertyCreate(drmFd, objID, objtype, propName);
         uint64_t value_2 = mesonPropertyGetValue(meson_prop_dv);
         mesonPropertyDestroy(meson_prop_dv);
         *prop_value = _getHDRSupportedList(value, value_2);
@@ -543,11 +543,11 @@ int meson_drm_get_prop( ENUM_MESON_DRM_PROP enProp, uint32_t* prop_value )
     {
         if (*prop_value == 0)
         {
-            objID =  mesonConnectorGetId(s_conn_HDMI);
+            objID =  mesonConnectorGetId(conn);
             objtype = DRM_MODE_OBJECT_CONNECTOR;
             sprintf( propName, "%s", DRM_CONNECTOR_PROP_HDCP_PRIORITY);
             struct mesonProperty* meson_prop_HDCP = NULL;
-            meson_prop_HDCP = mesonPropertyCreate(s_drm_fd, objID, objtype, propName);
+            meson_prop_HDCP = mesonPropertyCreate(drmFd, objID, objtype, propName);
             uint64_t value_3 = mesonPropertyGetValue(meson_prop_HDCP);
             mesonPropertyDestroy(meson_prop_HDCP);
             printf("\n prop value:%llu objID:%d,name:%s\n",value_3, objID,propName);
@@ -556,9 +556,12 @@ int meson_drm_get_prop( ENUM_MESON_DRM_PROP enProp, uint32_t* prop_value )
         }
     }
     mesonPropertyDestroy(meson_prop);
-    meson_drm_deinit();
     ret = 0;
 out:
+    if (conn)
+        mesonConnectorDestroy(drmFd,conn);
+    if (drmFd >= 0 )
+        close(drmFd);
     return ret;
 }
 
@@ -593,7 +596,7 @@ struct mesonConnector* get_current_connector(int drmFd)
 void meson_drm_close_fd(int drmFd)
 {
     if (drmFd >= 0)
-        close(s_drm_fd);
+        close(drmFd);
 }
 
 int meson_drm_get_vblank_time(int drmFd, int nextVsync,uint64_t *vblankTime, uint64_t *refreshInterval)

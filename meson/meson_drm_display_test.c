@@ -43,8 +43,7 @@ int main(void )
             DisplayMode mode;
             if (meson_drm_getMode(&mode) == 0) {
                 printf("\n mode (%d %d %d %d)\n",mode.w, mode.h, mode.vrefresh, mode.interlace);
-        }
-
+            }
         } else if (get == 3) {
             meson_drm_get_prop(ENUM_DRM_PROP_HDMITX_EOTF, &value);
             printf("\n EOTF:%d\n",value);
@@ -67,7 +66,7 @@ int main(void )
                 printf("\n mode count:%d\n",count);
                 int i = 0;
                 for (int i=0; i<count; i++) {
-                    printf(" (%s %d %d %d)\n", modes[i].name, modes[i].w, modes[i].h, modes[i].interlace);
+                    printf(" (%s %d %d %d %d)\n", modes[i].name, modes[i].w, modes[i].h, modes[i].interlace,modes[i].vrefresh);
                 }
                 if (modes)
                     free(modes);
@@ -133,9 +132,18 @@ int main(void )
             }
         }
         else if (get == 14) {
-            // need to do:get HDCP status from property:
-            // Content Protection,HDCP Content Type, HDCP_CONTENT_TYPE0_PRIORITY
-            printf("\n need to do\n");
+            if (0 == meson_drm_get_prop( ENUM_DRM_PROP_GETRX_HDCP_AUTHMODE, &value)) {
+                if (value & 0x1)
+                    printf("\n HDCP 14\n");
+                if (value & 0x2)
+                    printf("\n HDCP 22\n");
+                if (value & 0x8)
+                    printf("\n success\n");
+                else
+                    printf("\n fail\n");
+             } else {
+                    printf("\n meson_drm_get_prop fail\n");
+             }
         }
         else if (get == 15) {
            if (0 == meson_drm_get_prop( ENUM_DRM_PROP_HDMI_ASPECT_RATIO, &value)) {

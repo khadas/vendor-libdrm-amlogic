@@ -23,7 +23,6 @@
 #define LIBUDEV_EVT_TYPE_KERNEL     "kernel"
 #define LIBUDEV_SUBSYSTEM_DRM       "drm"
 
-//static pthread_t event_monitor_threadId;
 static bool isMonitoringAlive = false;
 displayEventCallback _DisplayEventCb = NULL;
 static void* uevent_monitor_thread(void *arg);
@@ -61,10 +60,16 @@ bool RegisterDisplayEventCallback(displayEventCallback cb)
 }
 bool get_hdcp_status(ENUM_HDCP_STATUS *status)
 {
-    // need to do:get HDCP status from property:
-    // Content Protection,HDCP Content Type, HDCP_CONTENT_TYPE0_PRIORITY
-	*status = HDCP_STATUS_AUTHENTICATED;
-	return true;
+    uint32_t prop_value = 0;
+    if (meson_drm_get_prop( ENUM_DRM_PROP_GETRX_HDCP_AUTHMODE, &prop_value ) == 0) {
+        if (!!(prop_value & 0x8))
+            *status = HDCP_STATUS_AUTHENTICATED;
+        else
+            *status = HDCP_STATUS_AUTHENTICATIONFAILURE;
+        return true;
+    } else {
+        return false;
+    }
 }
 
 static void* uevent_monitor_thread(void *arg)
