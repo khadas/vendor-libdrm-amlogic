@@ -27,6 +27,10 @@
 static int meson_drm_setprop(int obj_id, char* prop_name, int prop_value );
 static uint32_t _getHDRSupportedList(uint64_t hdrlist, uint64_t dvlist);
 struct mesonConnector* get_current_connector(int drmFd);
+#define  FRAC_RATE_POLICY     "/sys/class/amhdmitx/amhdmitx0/frac_rate_policy"
+static int  _amsysfs_get_sysfs_str(const char *path, char *valstr, int size);
+static int  _get_frac_rate_policy();
+
 
 static int meson_drm_setprop(int obj_id, char* prop_name, int prop_value )
 {
@@ -599,6 +603,33 @@ void meson_drm_close_fd(int drmFd)
         close(drmFd);
 }
 
+static int  _amsysfs_get_sysfs_str(const char *path, char *valstr, int size)
+{
+    int fd;
+    fd = open(path, O_RDONLY);
+    if (fd >= 0) {
+        memset(valstr,0,size);
+        read(fd, valstr, size - 1);
+        valstr[strlen(valstr)] = '\0';
+        close(fd);
+    } else {
+        sprintf(valstr, "%s", "fail");
+        return -1;
+    };
+    return 0;
+}
+
+static int  _get_frac_rate_policy()
+{
+    int ret = 0;
+    char buffer[10] = {'\0'};
+    if (0 == _amsysfs_get_sysfs_str(FRAC_RATE_POLICY, buffer, sizeof(buffer)-1) ) {
+        if (strstr(buffer, "1"))
+            ret = 1;
+    }
+    return ret;
+}
+
 int meson_drm_get_vblank_time(int drmFd, int nextVsync,uint64_t *vblankTime, uint64_t *refreshInterval)
 {
     int ret = -1;
@@ -615,9 +646,13 @@ int meson_drm_get_vblank_time(int drmFd, int nextVsync,uint64_t *vblankTime, uin
     if (connector != NULL ) {
        mode = mesonConnectorGetCurMode(drmFd, connector);
        if (mode) {
-           *refreshInterval = (1000000LL+(mode->vrefresh/2))/mode->vrefresh;
+           *refreshInterval = (1000000LL+(mode->vrefresh/2)) / mode->vrefresh;
+           if ( ( mode->vrefresh == 60 || mode->vrefresh == 30 || mode->vrefresh == 24
+                  || mode->vrefresh == 120 || mode->vrefresh == 240 )
+               && _get_frac_rate_policy() == 1 ) {
+              *refreshInterval = (1000000LL+(mode->vrefresh/2)) * 1001 / mode->vrefresh / 1000;
+           }
            free(mode);
-           ret = 0;
        }
     }
     drmVBlank vbl;
@@ -627,13 +662,16 @@ int meson_drm_get_vblank_time(int drmFd, int nextVsync,uint64_t *vblankTime, uin
     rc = drmWaitVBlank(drmFd, &vbl );
     if (rc != 0 ) {
         printf("drmWaitVBlank failed: rc %d errno %d",rc, errno);
+        ret = -1;
         goto out;
     }
     if ((rc == 0) && (vbl.reply.tval_sec > 0 || vbl.reply.tval_usec > 0)) {
         *vblankTime = vbl.reply.tval_sec * 1000000LL + vbl.reply.tval_usec;
     }
+    ret = 0;
 out:
     mesonConnectorDestroy(drmFd, connector);
     return ret;
 }
+
 
