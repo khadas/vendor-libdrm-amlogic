@@ -580,6 +580,8 @@ int meson_drm_open()
     ret_fd = open(card, O_RDONLY|O_CLOEXEC);
     if ( ret_fd < 0 )
         printf("\n drm card:%s open fail\n",card);
+    else
+        drmDropMaster(ret_fd);
     return ret_fd;
 }
 struct mesonConnector* get_current_connector(int drmFd)
