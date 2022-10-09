@@ -590,7 +590,8 @@ struct mesonConnector* get_current_connector(int drmFd)
     struct mesonConnector* connectorTV = NULL;
     int HDMIconnected = 0;
     connectorHDMI = mesonConnectorCreate(drmFd, DRM_MODE_CONNECTOR_HDMIA);
-    HDMIconnected = mesonConnectorGetConnectState(connectorHDMI);
+    if (connectorHDMI)
+        HDMIconnected = mesonConnectorGetConnectState(connectorHDMI);
     if (HDMIconnected == 1) {
         return connectorHDMI;
     } else {

@@ -56,7 +56,6 @@ struct mesonConnector *mesonConnectorCreate(int drmFd, int type)
 	   }
 	}
 	if ( !conn ) {
-		printf("\n mesonConnectorCreate: unable to get connector for drmfd (%d) type(%d)\n", drmFd,type);
 		ret = NULL;
 		goto exit;
 	}
@@ -236,7 +235,7 @@ int mesonConnectorGetConnectState(struct mesonConnector* connector)
 {
 	int ret = -1;
 	if ( !connector ) {
-			printf("\n mesonConnectorGetEdidBlob:invalid parameters\n");
+			printf("\n mesonConnectorGetConnectState:invalid parameters\n");
 	} else {
 		ret = connector->connection;
 	}
@@ -246,7 +245,7 @@ int mesonConnectorGetCRTCId(struct mesonConnector* connector)
 {
 	int ret = -1;
 	if ( !connector ) {
-		printf("\n mesonConnectorGetEdidBlob:invalid parameters\n");
+		printf("\n mesonConnectorGetCRTCId:invalid parameters\n");
 	} else {
 		ret = connector->crtc_id;
 	}
