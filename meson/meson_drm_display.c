@@ -587,16 +587,25 @@ int meson_drm_open()
 struct mesonConnector* get_current_connector(int drmFd)
 {
     struct mesonConnector* connectorHDMI = NULL;
-    struct mesonConnector* connectorTV = NULL;
+    struct mesonConnector* connectorLVDS = NULL;
+    struct mesonConnector* connectorCVBS = NULL;
     int HDMIconnected = 0;
+    int TVConnected = 0;
     connectorHDMI = mesonConnectorCreate(drmFd, DRM_MODE_CONNECTOR_HDMIA);
     if (connectorHDMI)
         HDMIconnected = mesonConnectorGetConnectState(connectorHDMI);
     if (HDMIconnected == 1) {
         return connectorHDMI;
     } else {
-        connectorTV = mesonConnectorCreate(drmFd, DRM_MODE_CONNECTOR_LVDS);
-        return connectorTV;
+        connectorLVDS = mesonConnectorCreate(drmFd, DRM_MODE_CONNECTOR_LVDS);
+        if (connectorLVDS)
+            TVConnected = mesonConnectorGetConnectState(connectorLVDS);
+        if (TVConnected == 1) {
+            return connectorLVDS;
+        } else {
+            connectorCVBS = mesonConnectorCreate(drmFd, DRM_MODE_CONNECTOR_TV);
+            return connectorCVBS;
+        }
     }
 }
 
