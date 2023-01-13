@@ -13,16 +13,15 @@ CFLAGS += -Wall -Wno-unknown-pragmas -Wno-format -Wno-format-security -Wno-error
 CFLAGS += -I$(STAGING_DIR)/usr/include/ -I$(STAGING_DIR)/usr/include/libdrm/
 LDFLAGS += -L$(STAGING_DIR)/usr/lib -ldrm
 meson_drm_SRCS = \
-  $(LOCAL_PATH)/libdrm_meson_connector.c \
-  $(LOCAL_PATH)/libdrm_meson_property.c \
-  $(LOCAL_PATH)/meson_drm.c  \
-  $(LOCAL_PATH)/meson_drm_async_commit.c \
-  $(LOCAL_PATH)/meson_drm_kms.c  \
-  $(LOCAL_PATH)/meson_drm_util.c  \
-  $(LOCAL_PATH)/meson_drm_display.c  \
-  $(LOCAL_PATH)/meson_drm_event.c  \
-
-  $(NULL)
+	$(LOCAL_PATH)/libdrm_meson_connector.c \
+	$(LOCAL_PATH)/libdrm_meson_property.c \
+	$(LOCAL_PATH)/meson_drm.c  \
+	$(LOCAL_PATH)/meson_drm_async_commit.c \
+	$(LOCAL_PATH)/meson_drm_kms.c  \
+	$(LOCAL_PATH)/meson_drm_util.c  \
+	$(LOCAL_PATH)/meson_drm_display.c  \
+	$(LOCAL_PATH)/meson_drm_event.c  \
+	$(NULL)
 
 meson_drm_HEADERS = \
 	$(LOCAL_PATH) \
@@ -35,11 +34,14 @@ meson_drm_test_SRCS  = \
 meson_drm_display_test_SRCS  = \
 	$(LOCAL_PATH)/meson_drm_display_test.c \
 	$(NULL)
+
 # ---------------------------------------------------------------------
 #  Build rules
-BUILD_TARGETS = libdrm_meson.so meson_drm_test  meson_drm_display_test
+BUILD_TARGETS = libdrm_meson.so meson_drm_test meson_drm_display_test
 
 .PHONY: all install uninstall clean
+
+all:$(BUILD_TARGETS)
 
 libdrm_meson.so: $(meson_drm_SRCS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -g -D_FILE_OFFSET_BITS=64 -Wall  \
@@ -54,8 +56,6 @@ meson_drm_display_test: $(meson_drm_display_test_SRCS) libdrm_meson.so
 	$(CC) $(CFLAGS)  -I$(meson_drm_HEADERS) -L$(LOCAL_PATH) \
 	-ldrm_meson $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
-all: $(BUILD_TARGETS)
-
 clean:
 	rm -f *.o $(BUILD_TARGETS)
 
@@ -66,10 +66,8 @@ install:
 	cp meson_drmif.h $(STAGING_DIR)/usr/include/
 	cp meson_drm_util.h $(STAGING_DIR)/usr/include/
 
-
 uninstall:
 	rm -f $(TARGET_DIR)/usr/lib/libdrm_meson.so
 	rm -f $(TARGET_DIR)/usr/bin/meson_drm_test
 	rm -f $(TARGET_DIR)/usr/bin/meson_drm_display_test
-
 
