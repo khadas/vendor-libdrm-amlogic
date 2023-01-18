@@ -23,6 +23,7 @@
 
 struct kms_display;
 
+
 #define VOID2U64(x) ((uint64_t)(unsigned long)(x))
 #define container_of(ptr, type, member) \
     (type *)((char *)(ptr) - (char *) &((type *)0)->member)
@@ -65,7 +66,6 @@ struct plane_state {
     struct property src_y;
     struct property src_w;
     struct property src_h;
-
     struct property type;
     struct property in_fence_fd;
     struct property in_formats;
@@ -125,7 +125,7 @@ static int free_buf(struct drm_display *drm_disp, struct drm_buf *buf)
     for ( i = 0; i < buf->nbo; i++)
         close(buf->fd[i]);
 
-	fd = drm_disp->alloc_only ? drm_disp->dev->render_fd : drm_disp->dev->fd;
+    fd = drm_disp->alloc_only ? drm_disp->dev->render_fd : drm_disp->dev->fd;
     drmModeRmFB(drm_disp->drm_fd, buf->fb_id);
     memset(&destroy_dumb, 0, sizeof(destroy_dumb));
 
@@ -148,20 +148,19 @@ static int free_buf(struct drm_display *drm_disp, struct drm_buf *buf)
                 }
             }
         }
+        meson_bo_destroy(buf->bos[i]);
     }
-
+    free(buf);
     return 0;
 }
 static int kms_free_bufs(struct drm_display *drm_disp)
 {
     int i;
     struct drm_buf *buf;
-
     for ( i = 0; i < drm_disp->nbuf; i++ ) {
         buf = &drm_disp->bufs[i];
         free_buf(drm_disp, buf);
     }
-
     return 0;
 }
 
@@ -293,15 +292,14 @@ static struct drm_buf *kms_alloc_buf(struct drm_display *drm_disp, struct drm_bu
         return NULL;
     }
 
-	/*for non-root users, just need alloc buf and don't need to add framebuffer*/
-	if (drm_disp->alloc_only)
-		return buf;
+    /*for non-root users, just need alloc buf and don't need to add framebuffer*/
+    if (drm_disp->alloc_only)
+        return buf;
 
     ret = add_framebuffer(drm_disp->drm_fd, buf, bo_handles, DRM_FORMAT_MOD_NONE);
     if (ret) {
-        fprintf(stderr, "add_framebuffer fail\n");
+        fprintf(stderr, "add_framebuffer fail, call free_buf\n");
         free_buf(drm_disp, buf);
-        free(buf);
         return NULL;
     }
 
@@ -517,7 +515,6 @@ static void getproperty(int drm_fd, drmModeObjectProperties* props, const char *
             p->value = props->prop_values[i];
             //fprintf(stdout, "getproperty: %s, id: %u, value: %llu \n", res->name, p->id, p->value);
         }
-
         drmModeFreeProperty(res);
     }
 }
@@ -538,9 +535,10 @@ static int populate_connectors(drmModeRes *resources, struct kms_display *disp)
             continue;
         }
 
-        if (connector->connector_type == DRM_MODE_CONNECTOR_TV)
+        if (connector->connector_type == DRM_MODE_CONNECTOR_TV) {
+            drmModeFreeConnector(connector);
             continue;
-
+        }
         state = calloc(1, sizeof(*state));
         disp->conn_states[num_connector++] = state;
         state->id = resources->connectors[i];
@@ -605,7 +603,6 @@ static int populate_crtcs(drmModeRes *resources, struct kms_display *disp)
             getproperty(disp->base.drm_fd, props, "ACTIVE", &state->active);
             getproperty(disp->base.drm_fd, props, "OUT_FENCE_PTR", &state->out_fence);
             getproperty(disp->base.drm_fd, props, "VIDEO_OUT_FENCE_PTR", &state->video_out_fence);
-
             drmModeFreeObjectProperties(props);
         } else {
             fprintf(stderr, "get crtc obj property fail\n");
@@ -766,7 +763,7 @@ static int drm_kms_init_resource(struct kms_display *disp)
     ret = populate_planes(resources, disp);
     if (ret)
         goto error1;
-
+    drmModeFreeResources(resources);
     return 0;
 
 error1:
@@ -802,7 +799,7 @@ struct drm_display *drm_kms_init(void)
     base->import_buf = kms_import_buf;
     base->free_buf = kms_free_buf;
     base->post_buf = kms_post_buf;
-	base->alloc_only = 0;
+    base->alloc_only = 0;
 
     ret = drm_kms_init_resource(display);
     if (ret) {

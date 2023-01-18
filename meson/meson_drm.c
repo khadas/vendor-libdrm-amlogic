@@ -41,10 +41,8 @@ struct meson_device *meson_device_create(int fd, int render_fd)
                 strerror(errno));
         return NULL;
     }
-
     dev->fd = fd;
-	dev->render_fd = render_fd;
-
+    dev->render_fd = render_fd;
     return dev;
 }
 
@@ -83,8 +81,8 @@ struct meson_bo *meson_bo_create(struct meson_device *dev, size_t size,
         fprintf(stderr, "invalid size.\n");
         goto fail;
     }
-
     bo = calloc(sizeof(*bo), 1);
+    printf("meson_bo_create：%p\n",bo);
     if (!bo) {
         fprintf(stderr, "failed to create bo[%s].\n",
             strerror(errno));
@@ -92,7 +90,7 @@ struct meson_bo *meson_bo_create(struct meson_device *dev, size_t size,
     }
 
     bo->dev = dev;
-	fd = alloc_only ? dev->render_fd : dev->fd;
+    fd = alloc_only ? dev->render_fd : dev->fd;
 
     if (drmIoctl(fd, DRM_IOCTL_MESON_GEM_CREATE, &req)) {
         fprintf(stderr, "failed to create gem object[%s].\n",
@@ -103,7 +101,6 @@ struct meson_bo *meson_bo_create(struct meson_device *dev, size_t size,
     bo->handle = req.handle;
     bo->size = size;
     bo->flags = flags;
-
     return bo;
 
 err_free_bo:
@@ -118,23 +115,19 @@ fail:
  */
 void meson_bo_destroy(struct meson_bo *bo)
 {
+    printf("meson_bo_destroy：%p\n",bo);
     if (!bo)
         return;
-
     if (bo->vaddr)
         munmap(bo->vaddr, bo->size);
-
     if (bo->fd)
         close(bo->fd);
-
     if (bo->handle) {
         struct drm_gem_close req = {
             .handle = bo->handle,
         };
-
         drmIoctl(bo->dev->fd, DRM_IOCTL_GEM_CLOSE, &req);
     }
-
     free(bo);
 }
 
@@ -145,9 +138,8 @@ uint32_t meson_bo_handle(struct meson_bo *bo)
 
 int meson_bo_dmabuf(struct meson_bo *bo, int alloc_only)
 {
-	int fd;
-
-	fd = alloc_only ? bo->dev->render_fd : bo->dev->fd;
+    int fd;
+    fd = alloc_only ? bo->dev->render_fd : bo->dev->fd;
     if (!bo->fd) {
         struct drm_prime_handle req = {
             .handle = bo->handle,
