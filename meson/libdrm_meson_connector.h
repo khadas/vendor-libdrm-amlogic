@@ -32,7 +32,8 @@ extern "C" {
 #define DRM_CONNECTOR_PROP_GETTX_AR_VALUE       "aspect_ratio_value"
 #define DRM_CONNECTOR_PROP_HDCP_PRIORITY       "HDCP_CONTENT_TYPE0_PRIORITY"
 #define DRM_CONNECTOR_PROP_DV_ENABLE       "dv_enable"
-
+#define DRM_CONNECTOR_PROP_COLOR_SPACE       "color_space"
+#define DRM_CONNECTOR_PROP_COLOR_DEPTH       "color_depth"
 
 struct mesonConnector;
 struct mesonConnector *mesonConnectorCreate(int drmFd, int type);

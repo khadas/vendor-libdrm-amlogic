@@ -21,6 +21,7 @@ meson_drm_SRCS = \
 	$(LOCAL_PATH)/meson_drm_util.c  \
 	$(LOCAL_PATH)/meson_drm_display.c  \
 	$(LOCAL_PATH)/meson_drm_event.c  \
+        $(LOCAL_PATH)/meson_drm_settings.c  \
 	$(NULL)
 
 meson_drm_HEADERS = \
@@ -35,9 +36,12 @@ meson_drm_display_test_SRCS  = \
 	$(LOCAL_PATH)/meson_drm_display_test.c \
 	$(NULL)
 
+meson_drm_settings_test_SRCS  = \
+	$(LOCAL_PATH)/meson_drm_settings_test.c \
+	$(NULL)
 # ---------------------------------------------------------------------
 #  Build rules
-BUILD_TARGETS = libdrm_meson.so meson_drm_test meson_drm_display_test
+BUILD_TARGETS = libdrm_meson.so meson_drm_test  meson_drm_display_test  meson_drm_settings_test
 
 .PHONY: all install uninstall clean
 
@@ -55,6 +59,9 @@ meson_drm_test: $(meson_drm_test_SRCS) libdrm_meson.so
 meson_drm_display_test: $(meson_drm_display_test_SRCS) libdrm_meson.so
 	$(CC) $(CFLAGS)  -I$(meson_drm_HEADERS) -L$(LOCAL_PATH) \
 	-ldrm_meson $(LDFLAGS) -o $@ $^ $(LDLIBS)
+meson_drm_settings_test: $(meson_drm_settings_test_SRCS) libdrm_meson.so
+	$(CC) $(CFLAGS)  -I$(meson_drm_HEADERS) -L$(LOCAL_PATH) \
+	-ldrm_meson $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
 clean:
 	rm -f *.o $(BUILD_TARGETS)
@@ -63,6 +70,7 @@ install:
 	install -m 0644 libdrm_meson.so $(TARGET_DIR)/usr/lib
 	install -m 755 meson_drm_test $(TARGET_DIR)/usr/bin/
 	install -m 755 meson_drm_display_test $(TARGET_DIR)/usr/bin/
+	install -m 755 meson_drm_settings_test $(TARGET_DIR)/usr/bin/
 	cp meson_drmif.h $(STAGING_DIR)/usr/include/
 	cp meson_drm_util.h $(STAGING_DIR)/usr/include/
 
@@ -70,4 +78,5 @@ uninstall:
 	rm -f $(TARGET_DIR)/usr/lib/libdrm_meson.so
 	rm -f $(TARGET_DIR)/usr/bin/meson_drm_test
 	rm -f $(TARGET_DIR)/usr/bin/meson_drm_display_test
+	rm -f $(TARGET_DIR)/usr/bin/meson_drm_settings_test
 
