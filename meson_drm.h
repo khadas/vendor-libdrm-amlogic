@@ -1,13 +1,13 @@
-/*
- * include/uapi/drm/meson_drm.h
- *
- * Copyright (C) 2016 Amlogic, Inc. All rights reserved.
- *
- * This program is free software; you can redistribute  it and/or modify it
- * under  the terms of  the GNU General  Public License as published by the
- * Free Software Foundation;  either version 2 of the  License, or (at your
- * option) any later version.
- */
+ /*
+  * include/uapi/drm/meson_drm.h
+  *
+  * Copyright (C) 2016 Amlogic, Inc. All rights reserved.
+  *
+  * This program is free software; you can redistribute  it and/or modify it
+  * under  the terms of  the GNU General  Public License as published by the
+  * Free Software Foundation;  either version 2 of the License, or (at your
+  * option) any later version.
+  */
 
 #ifndef _MESON_DRM_H
 #define _MESON_DRM_H

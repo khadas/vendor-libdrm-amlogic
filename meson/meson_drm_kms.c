@@ -1,11 +1,12 @@
-/*
- * Copyright (C) 2020 Amlogic, Inc. All rights reserved.
+ /*
+ * Copyright (c) 2019 Amlogic, Inc. All rights reserved.
  *
- * This program is free software; you can redistribute  it and/or modify it
- * under  the terms of  the GNU General  Public License as published by the
- * Free Software Foundation;  either version 2 of the  License, or (at your
- * option) any later version.
+ * This source code is subject to the terms and conditions defined in the
+ * file 'LICENSE' which is part of this source code package.
+ *
+ * Description:
  */
+
 
 #include <stdio.h>
 #include <fcntl.h>
@@ -90,6 +91,7 @@ static void kms_destroy_display(struct drm_display *drm_disp)
     int i;
     struct kms_display *disp = to_kms_display(drm_disp);
     close(drm_disp->drm_fd);
+    close(drm_disp->dev->render_fd);
     meson_device_destroy(drm_disp->dev);
 
     for (i = 0; i < MAX_CRTC; i++) {
@@ -708,7 +710,8 @@ error:
 static int drm_kms_init_resource(struct kms_display *disp)
 {
     int ret;
-    int drm_fd, render_fd;
+    int drm_fd = -1;
+    int render_fd = -1;
     drmModeRes *resources;
 
     drm_fd = open("/dev/dri/card0", O_RDWR | O_CLOEXEC);
@@ -722,7 +725,7 @@ static int drm_kms_init_resource(struct kms_display *disp)
     if (render_fd < 0) {
         fprintf(stderr, "Unable to open renderD128 node: %s\n",
                strerror(errno));
-        return -1;
+        goto error3;
     }
 
     disp->base.drm_fd = drm_fd;
@@ -771,7 +774,10 @@ error1:
 error2:
     meson_device_destroy(disp->base.dev);
 error3:
-    close(drm_fd);
+    if (drm_fd >= 0)
+        close(drm_fd);
+    if (render_fd >= 0)
+        close(render_fd);
 
     return -1;
 }

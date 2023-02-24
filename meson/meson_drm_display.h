@@ -1,4 +1,4 @@
-/*
+ /*
  * Copyright (c) 2021 Amlogic, Inc. All rights reserved.
  *
  * This source code is subject to the terms and conditions defined in the
