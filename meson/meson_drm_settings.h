@@ -71,6 +71,11 @@ typedef enum _ENUM_MESON_HDR_POLICY {
     MESON_HDR_POLICY_FOLLOW_SOURCE
 } ENUM_MESON_HDR_POLICY;
 
+typedef enum _ENUM_MESON_HDCP_AUTH_STATUS {
+    MESON_AUTH_STATUS_FAIL      = 0,
+    MESON_AUTH_STATUS_SUCCESS
+} ENUM_MESON_HDCPAUTH_STATUS;
+
 int meson_drm_changeMode(int drmFd, drmModeAtomicReq *req,
                       DisplayMode* modeInfo, MESON_CONNECTOR_TYPE connType);
 int meson_drm_getModeInfo(int drmFd, MESON_CONNECTOR_TYPE connType, DisplayMode* mode );
@@ -89,6 +94,14 @@ int meson_drm_setColorDepth(int drmFd, drmModeAtomicReq *req,
 ENUM_MESON_HDR_POLICY meson_drm_getHDRPolicy(int drmFd, MESON_CONNECTOR_TYPE connType );
 int meson_drm_setHDRPolicy(int drmFd, drmModeAtomicReq *req,
                            ENUM_MESON_HDR_POLICY hdrPolicy, MESON_CONNECTOR_TYPE connType);
+
+
+void meson_drm_getEDIDData(int drmFd, MESON_CONNECTOR_TYPE connType, int * data_Len, char **data );
+int meson_drm_setAVMute(int drmFd, drmModeAtomicReq *req,
+                       bool mute, MESON_CONNECTOR_TYPE connType);
+ENUM_MESON_HDCPAUTH_STATUS meson_drm_getHdcpAuthStatus( int drmFd, MESON_CONNECTOR_TYPE connType );
+int meson_drm_setHDCPEnable(int drmFd, drmModeAtomicReq *req,
+                       bool enable, MESON_CONNECTOR_TYPE connType);
 
 int meson_open_drm();
 void meson_close_drm(int drmFd);
