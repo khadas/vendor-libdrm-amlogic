@@ -142,6 +142,11 @@ static void* uevent_monitor_thread(void *arg)
                                     /* free dev */
                                     udev_device_unref(dev);
                                 }
+                                else {
+                                    printf("I:[%s:%d] udev_monitor_receive_device failed\n", __FUNCTION__, __LINE__);
+                                    enConnection = MESON_DRM_UNKNOWNCONNECTION;
+                                    enPreConnection = MESON_DRM_UNKNOWNCONNECTION;
+                                }
                             } else {
                                 /* TODO: Select timeout or error; handle accordingly. */
                             }
