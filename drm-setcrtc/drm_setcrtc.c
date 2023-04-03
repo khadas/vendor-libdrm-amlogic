@@ -578,6 +578,7 @@ int main(int argc, char** argv) {
     evctx.vblank_handler = NULL;
     evctx.page_flip_handler = NULL;
 
+    user_stop = true;
     /* Poll for events */
     while (!user_stop) {
 #if 1

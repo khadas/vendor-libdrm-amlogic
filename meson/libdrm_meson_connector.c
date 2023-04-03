@@ -66,6 +66,7 @@ struct mesonConnector *mesonConnectorCreate(int drmFd, int type)
 	if ( !res )
 	{
 		ERROR("%s %d failed to get resources from drmFd (%d)", __FUNCTION__,__LINE__,drmFd);
+		free(ret);
 		ret = NULL;
 		goto exit;
 	}
@@ -85,6 +86,7 @@ struct mesonConnector *mesonConnectorCreate(int drmFd, int type)
 	   }
 	}
 	if ( !conn ) {
+		free(ret);
 		ret = NULL;
 		goto exit;
 	}

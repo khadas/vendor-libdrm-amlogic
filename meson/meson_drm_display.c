@@ -596,12 +596,14 @@ struct mesonConnector* get_current_connector(int drmFd)
     if (HDMIconnected == 1) {
         return connectorHDMI;
     } else {
+        connectorHDMI = mesonConnectorDestroy(drmFd, connectorHDMI);
         connectorLVDS = mesonConnectorCreate(drmFd, DRM_MODE_CONNECTOR_LVDS);
         if (connectorLVDS)
             TVConnected = mesonConnectorGetConnectState(connectorLVDS);
         if (TVConnected == 1) {
             return connectorLVDS;
         } else {
+            connectorLVDS = mesonConnectorDestroy(drmFd, connectorLVDS);
             connectorCVBS = mesonConnectorCreate(drmFd, DRM_MODE_CONNECTOR_TV);
             return connectorCVBS;
         }
