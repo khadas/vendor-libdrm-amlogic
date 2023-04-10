@@ -42,6 +42,7 @@ struct drm_buf {
 
     struct drm_display *disp;
     int commit_to_video;
+    int disable_plane;
 };
 
 struct drm_buf_metadata {
