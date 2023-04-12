@@ -717,7 +717,7 @@ static int drm_kms_init_resource(struct kms_display *disp)
                strerror(errno));
         return -1;
     }
-
+    drmDropMaster(drm_fd);
     render_fd = open("/dev/dri/renderD128", O_RDWR | O_CLOEXEC);
     if (render_fd < 0) {
         fprintf(stderr, "Unable to open renderD128 node: %s\n",
