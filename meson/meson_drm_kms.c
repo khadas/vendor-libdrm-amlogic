@@ -129,7 +129,15 @@ static int free_buf(struct drm_display *drm_disp, struct drm_buf *buf)
         close(buf->fd[i]);
 
     fd = drm_disp->alloc_only ? drm_disp->dev->render_fd : drm_disp->dev->fd;
-    drmModeRmFB(drm_disp->drm_fd, buf->fb_id);
+    if (drm_disp->freeze) {
+        ret = drmIoctl(drm_disp->drm_fd, DRM_IOCTL_MESON_RMFB, &buf->fb_id);
+        if (ret < 0) {
+            fprintf(stderr, "Unable to rmfb: %s\n",
+                    strerror(errno));
+        }
+    } else {
+        drmModeRmFB(drm_disp->drm_fd, buf->fb_id);
+    }
     memset(&destroy_dumb, 0, sizeof(destroy_dumb));
 
     for ( i = 0; i < buf->nbo; i++) {
@@ -808,6 +816,7 @@ struct drm_display *drm_kms_init(void)
     base->free_buf = kms_free_buf;
     base->post_buf = kms_post_buf;
     base->alloc_only = 0;
+    base->freeze = 0;
 
     ret = drm_kms_init_resource(display);
     if (ret) {
