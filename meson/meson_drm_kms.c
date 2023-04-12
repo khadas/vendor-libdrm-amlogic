@@ -122,6 +122,9 @@ static int free_buf(struct drm_display *drm_disp, struct drm_buf *buf)
     int i, fd, ret;
     struct drm_mode_destroy_dumb destroy_dumb;
 
+    if (!buf)
+        return -1;
+
     for ( i = 0; i < buf->nbo; i++)
         close(buf->fd[i]);
 
@@ -130,6 +133,9 @@ static int free_buf(struct drm_display *drm_disp, struct drm_buf *buf)
     memset(&destroy_dumb, 0, sizeof(destroy_dumb));
 
     for ( i = 0; i < buf->nbo; i++) {
+        if (!buf->bos[i])
+            continue;
+
         destroy_dumb.handle = meson_bo_handle(buf->bos[i]);
 
         ret = drmIoctl(fd, DRM_IOCTL_MODE_DESTROY_DUMB, &destroy_dumb);
@@ -148,9 +154,11 @@ static int free_buf(struct drm_display *drm_disp, struct drm_buf *buf)
                 }
             }
         }
-        meson_bo_destroy(buf->bos[i]);
+        free(buf->bos[i]);
+        buf->bos[i] = NULL;
     }
     free(buf);
+    buf = NULL;
     return 0;
 }
 static int kms_free_bufs(struct drm_display *drm_disp)
