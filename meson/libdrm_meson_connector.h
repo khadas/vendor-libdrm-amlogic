@@ -6,13 +6,11 @@
  *
  * Description:
  */
-
 #ifndef LIBDRM_MESON_CONNECTOR_H_
 #define LIBDRM_MESON_CONNECTOR_H_
 #if defined(__cplusplus)
 extern "C" {
 #endif
-
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -34,6 +32,9 @@ extern "C" {
 #define DRM_CONNECTOR_PROP_DV_ENABLE       "dv_enable"
 #define DRM_CONNECTOR_PROP_COLOR_SPACE       "color_space"
 #define DRM_CONNECTOR_PROP_COLOR_DEPTH       "color_depth"
+#define DRM_CONNECTOR_PROP_Content_Type       "content type"
+#define DRM_CONNECTOR_PROP_ACTIVE       "ACTIVE"
+#define DRM_CONNECTOR_VRR_ENABLED       "VRR_ENABLED"
 
 struct mesonConnector;
 struct mesonConnector *mesonConnectorCreate(int drmFd, int type);

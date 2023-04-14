@@ -6,7 +6,6 @@
  *
  * Description:
  */
-
 #ifndef MESON_DRM_SETTINGS_H_
 #define MESON_DRM_SETTINGS_H_
 #include <stdio.h>
@@ -20,6 +19,22 @@ extern "C" {
 #endif
 #define DRM_DISPLAY_MODE_LEN 32
 
+typedef enum _MESON_CONTENT_TYPE {
+    MESON_CONTENT_TYPE_Data      = 0,
+    MESON_CONTENT_TYPE_Graphics,
+    MESON_CONTENT_TYPE_Photo,
+    MESON_CONTENT_TYPE_Cinema,
+    MESON_CONTENT_TYPE_Game,
+    MESON_CONTENT_TYPE_RESERVED
+} MESON_CONTENT_TYPE;
+
+/*HDCP transmission time divided into Type0&Type1 content*/
+typedef enum _ENUM_MESON_HDCP_Content_Type{
+    MESON_HDCP_Type0 = 0,  //Type0 represents support for both 1.4 and 2.2
+    MESON_HDCP_Type1,   //Type1 represents only support for 2.2
+    MESON_HDCP_Type_RESERVED
+} ENUM_MESON_HDCP_Content_Type;
+
 typedef enum {
     MESON_DISCONNECTED      = 0,
     MESON_CONNECTED         = 1,
@@ -27,10 +42,10 @@ typedef enum {
 } ENUM_MESON_CONN_CONNECTION;
 
 typedef struct _DisplayMode {
-    uint16_t w;
-    uint16_t h;
-    uint32_t vrefresh;
-    bool interlace;
+    uint16_t w;  //<--Number of horizontal pixels in the effective display area-->//
+    uint16_t h;   //<--Number of vertical pixels in the effective display area-->//
+    uint32_t vrefresh;  //<--Display refresh rate--->//
+    bool interlace;  //<--Indicates which scanning form to choose, P represents progressive scanning, and i represents interlaced scanning; The default interlace value is 0 for P 1 for i-->//
     char name[DRM_DISPLAY_MODE_LEN];
 } DisplayMode;
 
@@ -76,6 +91,26 @@ typedef enum _ENUM_MESON_HDCP_AUTH_STATUS {
     MESON_AUTH_STATUS_SUCCESS
 } ENUM_MESON_HDCPAUTH_STATUS;
 
+int meson_drm_setContentType(int drmFd, drmModeAtomicReq *req,
+                       MESON_CONTENT_TYPE contentType, MESON_CONNECTOR_TYPE connType);
+
+int meson_drm_setVrrEnabled(int drmFd, drmModeAtomicReq *req,
+                       uint32_t VrrEnable, MESON_CONNECTOR_TYPE connType);
+int meson_drm_getVrrEnabled( int drmFd, MESON_CONNECTOR_TYPE connType );
+
+
+int meson_drm_getActive( int drmFd, MESON_CONNECTOR_TYPE connType );
+
+int meson_drm_setActive(int drmFd, drmModeAtomicReq *req,
+                       uint32_t active, MESON_CONNECTOR_TYPE connType);
+
+int meson_drm_getDvEnable( int drmFd, MESON_CONNECTOR_TYPE connType );
+int meson_drm_setDvEnable(int drmFd, drmModeAtomicReq *req,
+                       uint32_t dvEnable, MESON_CONNECTOR_TYPE connType);
+
+MESON_CONTENT_TYPE meson_drm_getContentType(int drmFd, MESON_CONNECTOR_TYPE connType );
+
+
 int meson_drm_changeMode(int drmFd, drmModeAtomicReq *req,
                       DisplayMode* modeInfo, MESON_CONNECTOR_TYPE connType);
 int meson_drm_getModeInfo(int drmFd, MESON_CONNECTOR_TYPE connType, DisplayMode* mode );
@@ -99,9 +134,23 @@ int meson_drm_setHDRPolicy(int drmFd, drmModeAtomicReq *req,
 void meson_drm_getEDIDData(int drmFd, MESON_CONNECTOR_TYPE connType, int * data_Len, char **data );
 int meson_drm_setAVMute(int drmFd, drmModeAtomicReq *req,
                        bool mute, MESON_CONNECTOR_TYPE connType);
+int meson_drm_getAVMute( int drmFd, MESON_CONNECTOR_TYPE connType );
+
 ENUM_MESON_HDCPAUTH_STATUS meson_drm_getHdcpAuthStatus( int drmFd, MESON_CONNECTOR_TYPE connType );
 int meson_drm_setHDCPEnable(int drmFd, drmModeAtomicReq *req,
                        bool enable, MESON_CONNECTOR_TYPE connType);
+
+int meson_drm_getsupportedModesList(int drmFd, DisplayMode** modeInfo, int* modeCount );
+int meson_drm_getPreferredMode( DisplayMode* mode);
+
+int meson_drm_setHDCPContentType(int drmFd, drmModeAtomicReq *req,
+                       ENUM_MESON_HDCP_Content_Type HDCPType, MESON_CONNECTOR_TYPE connType);
+ENUM_MESON_HDCP_Content_Type meson_drm_getHDCPContentType( int drmFd, MESON_CONNECTOR_TYPE connType );
+
+int meson_drm_getHdcpVer( int drmFd, MESON_CONNECTOR_TYPE connType );
+
+int meson_drm_getHdrCap( int drmFd, MESON_CONNECTOR_TYPE connType );
+int meson_drm_getDvCap( int drmFd, MESON_CONNECTOR_TYPE connType );
 
 int meson_open_drm();
 void meson_close_drm(int drmFd);
