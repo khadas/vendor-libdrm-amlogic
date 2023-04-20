@@ -7,8 +7,20 @@
  * Description:
  */
 
+#include <errno.h>
 #include <string.h>
 #include "libdrm_meson_connector.h"
+#include <linux/version.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <linux/version.h>
+
+
+#define MESON_DRM_MODE_GETCONNECTOR_HDMI     "/sys/class/drm/card0-HDMI-A-1/status"
+#define MESON_DRM_MODE_GETCONNECTOR_VBYONE    "/sys/class/drm/card0-VBYONE-A/status"
+
 struct mesonConnector {
 int type;
 int id;
@@ -20,7 +32,20 @@ int connection;
 int crtc_id;
 int encoder_id;
 };
-
+static int meson_amsysfs_set_sysfs_strs(const char *path, const char *val)
+{
+	int fd;
+	int bytes;
+	fd = open(path, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+	if (fd >= 0) {
+		bytes = write(fd, val, strlen(val));
+		close(fd);
+		return 0;
+	} else {
+		printf("unable to open file %s,err: %s\n", path, strerror(errno));
+	}
+	return -1;
+}
 struct mesonConnector *mesonConnectorCreate(int drmFd, int type)
 {
 	drmModeRes *res= NULL;
@@ -47,6 +72,11 @@ struct mesonConnector *mesonConnectorCreate(int drmFd, int type)
 		goto exit;
 	}
 	for ( i= 0; i < res->count_connectors; ++i ) {
+	   if ( type == DRM_MODE_CONNECTOR_HDMIA ) {
+		meson_amsysfs_set_sysfs_strs(MESON_DRM_MODE_GETCONNECTOR_HDMI, "detect");
+	   } else if ( type == DRM_MODE_CONNECTOR_LVDS ) {
+		meson_amsysfs_set_sysfs_strs(MESON_DRM_MODE_GETCONNECTOR_VBYONE, "detect");
+	   }
 	   conn= drmModeGetConnector( drmFd, res->connectors[i] );
 	   if ( conn ) {
 		  if ( conn->connector_type == type ) {    //是否需要判断当前connector是否连接
