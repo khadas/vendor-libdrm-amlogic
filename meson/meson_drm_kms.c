@@ -299,6 +299,7 @@ static struct drm_buf *kms_alloc_buf(struct drm_display *drm_disp, struct drm_bu
     buf->height = info->height;
     buf->flags = info->flags;
     buf->fence_fd = -1;
+    buf->disable_plane = 0;
     buf->disp = drm_disp;
 
     ret = alloc_bos(drm_disp, buf, bo_handles);
@@ -338,6 +339,7 @@ static int kms_alloc_bufs(struct drm_display *drm_disp, int num, struct drm_buf_
         buf->height = info->height;
         buf->flags = info->flags;
         buf->fence_fd = -1;
+        buf->disable_plane = 0;
         buf->disp = drm_disp;
 
         if (!info->fourcc)
@@ -389,6 +391,7 @@ static struct drm_buf *kms_import_buf(struct drm_display *disp, struct drm_buf_i
     buf->height = info->height;
     buf->flags = info->flags;
     buf->fence_fd = -1;
+    buf->disable_plane = 0;
     buf->disp = disp;
 
     if (!info->fourcc)
@@ -457,50 +460,63 @@ static int kms_post_buf(struct drm_display *drm_disp, struct drm_buf *buf)
 
     request = drmModeAtomicAlloc();
 
-#if 0
-    if (!disp->mode_set) {
-        flags |= DRM_MODE_ATOMIC_ALLOW_MODESET;
-        drmModeAtomicAddProperty(request, conn_state->id, conn_state->crtc_id.id, crtc_state->id);
+    if (buf->disable_plane) {
+        drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_x.id, 0);
+        drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_y.id, 0);
+        drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_w.id, 0);
+        drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_h.id, 0);
+        drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_x.id, 0);
+        drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_y.id, 0);
+        drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_w.id, 0);
+        drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_h.id, 0);
+        drmModeAtomicAddProperty(request, plane_state->id, plane_state->fb_id.id, 0);
+        drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_id.id, 0);
+    } else {
+    #if 0
+        if (!disp->mode_set) {
+            flags |= DRM_MODE_ATOMIC_ALLOW_MODESET;
+            drmModeAtomicAddProperty(request, conn_state->id, conn_state->crtc_id.id, crtc_state->id);
 
-        if (drmModeCreatePropertyBlob(drm_disp->drm_fd, &disp->conn_states[0]->mode,
-                                sizeof(drmModeModeInfo), &blob_id) != 0 ) {
-            return -1;
+            if (drmModeCreatePropertyBlob(drm_disp->drm_fd, &disp->conn_states[0]->mode,
+                                    sizeof(drmModeModeInfo), &blob_id) != 0 ) {
+                return -1;
+            }
+            drmModeAtomicAddProperty(request, crtc_state->id, crtc_state->mode_id.id, blob_id);
+            drmModeAtomicAddProperty(request, crtc_state->id, crtc_state->active.id, 1);
+
+            disp->mode_set = 1;
         }
-        drmModeAtomicAddProperty(request, crtc_state->id, crtc_state->mode_id.id, blob_id);
-        drmModeAtomicAddProperty(request, crtc_state->id, crtc_state->active.id, 1);
+    #else
+        /*No modeset needed in post buf, modeset will control by systemservice.*/
+    #endif
 
-        disp->mode_set = 1;
+        drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_x.id, buf->crtc_x);
+        drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_y.id, buf->crtc_y);
+        if (buf->crtc_w == 0) {
+            drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_w.id, conn_state->mode.hdisplay);
+        } else {
+            drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_w.id, buf->crtc_w);
+        }
+
+        if (buf->crtc_h == 0) {
+            drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_h.id, conn_state->mode.vdisplay);
+        } else {
+            drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_h.id, buf->crtc_h);
+        }
+
+        drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_x.id, buf->src_x << 16);
+        drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_y.id, buf->src_y << 16);
+        drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_w.id, buf->src_w << 16);
+        drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_h.id, buf->src_h << 16);
+        drmModeAtomicAddProperty(request, plane_state->id, plane_state->fb_id.id, buf->fb_id);
+        drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_id.id, crtc_state->id);
+    #if 0
+        if (buf->flags | (MESON_USE_VD2 | MESON_USE_VD1))
+            drmModeAtomicAddProperty(request, crtc_state->id, crtc_state->video_out_fence.id, VOID2U64(&buf->fence_fd));
+        else
+            drmModeAtomicAddProperty(request, crtc_state->id, crtc_state->out_fence.id, VOID2U64(&buf->fence_fd));
+    #endif
     }
-#else
-    /*No modeset needed in post buf, modeset will control by systemservice.*/
-#endif
-
-    drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_x.id, buf->crtc_x);
-    drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_y.id, buf->crtc_y);
-    if (buf->crtc_w == 0) {
-        drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_w.id, conn_state->mode.hdisplay);
-    } else {
-        drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_w.id, buf->crtc_w);
-    }
-
-    if (buf->crtc_h == 0) {
-        drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_h.id, conn_state->mode.vdisplay);
-    } else {
-        drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_h.id, buf->crtc_h);
-    }
-
-    drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_x.id, buf->src_x << 16);
-    drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_y.id, buf->src_y << 16);
-    drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_w.id, buf->src_w << 16);
-    drmModeAtomicAddProperty(request, plane_state->id, plane_state->src_h.id, buf->src_h << 16);
-    drmModeAtomicAddProperty(request, plane_state->id, plane_state->fb_id.id, buf->fb_id);
-    drmModeAtomicAddProperty(request, plane_state->id, plane_state->crtc_id.id, crtc_state->id);
-#if 0
-    if (buf->flags | (MESON_USE_VD2 | MESON_USE_VD1))
-        drmModeAtomicAddProperty(request, crtc_state->id, crtc_state->video_out_fence.id, VOID2U64(&buf->fence_fd));
-    else
-        drmModeAtomicAddProperty(request, crtc_state->id, crtc_state->out_fence.id, VOID2U64(&buf->fence_fd));
-#endif
 
     ret = drmModeAsyncAtomicCommit(drm_disp->drm_fd, request, flags, NULL);
     if (ret < 0) {
