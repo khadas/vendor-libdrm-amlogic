@@ -67,7 +67,8 @@ struct drm_display {
 
     size_t nbuf;
     struct drm_buf *bufs;
-	int alloc_only;
+    int alloc_only;
+    int freeze;
 
     void (*destroy_display)(struct drm_display *disp);
     int (*alloc_bufs)(struct drm_display *disp, int num, struct drm_buf_metadata *info);
