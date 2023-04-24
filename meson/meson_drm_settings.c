@@ -99,6 +99,7 @@ static struct mesonConnector* get_current_connector(int drmFd, MESON_CONNECTOR_T
             break;
         case MESON_CONNECTOR_CVBS:
             drmConnType = DRM_MODE_CONNECTOR_TV;
+            break;
         default :
             drmConnType = DRM_MODE_CONNECTOR_HDMIA;
             break;
@@ -147,7 +148,7 @@ static int meson_drm_set_property(int drmFd, drmModeAtomicReq *req, uint32_t obj
     prop = mesonPropertyCreate(drmFd, objId, objType, name);
     propId = mesonPropertyGetId(prop);
     mesonPropertyDestroy(prop);
-    fprintf(stderr, "\nmeson_drm_set_property name:%s propId:%d value:%llu\n", name, propId, value);
+    fprintf(stderr, "\nmeson_drm_set_property name:%s objId:%d propId:%d value:%llu\n", name, objId, propId, value);
     rc = drmModeAtomicAddProperty( req, objId, propId, value );
     if (rc < 0)
         fprintf(stderr, "\n %s %d meson_drm_set_property fail\n",__FUNCTION__,__LINE__);
@@ -207,6 +208,17 @@ int meson_drm_changeMode(int drmFd, drmModeAtomicReq *req, DisplayMode* modeInfo
     if (modeInfo == NULL || drmFd < 0 || req == NULL) {
         fprintf(stderr, "\n %s %d invalid parameter return\n",__FUNCTION__,__LINE__);
         return ret;
+    }
+    if (connType == MESON_CONNECTOR_CVBS)
+    {
+        struct mesonConnector* connHDMI = NULL;
+        uint32_t HDMIconnId;
+        int rc4 = -1;
+        connHDMI = get_current_connector(drmFd, MESON_CONNECTOR_HDMIA);
+        HDMIconnId = mesonConnectorGetId(connHDMI);
+        rc4 = meson_drm_set_property(drmFd, req, HDMIconnId, DRM_MODE_OBJECT_CONNECTOR, "CRTC_ID", 0);
+        mesonConnectorDestroy(drmFd,connHDMI);
+        fprintf(stderr, "\n %s %d change mode to cvbs, disconnect HDMI :%d \n",__FUNCTION__,__LINE__,rc4);
     }
     conn = get_current_connector(drmFd, connType);
     connId = mesonConnectorGetId(conn);
