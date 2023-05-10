@@ -41,8 +41,6 @@ static int meson_amsysfs_set_sysfs_strs(const char *path, const char *val)
 		bytes = write(fd, val, strlen(val));
 		close(fd);
 		return 0;
-	} else {
-		printf("unable to open file %s,err: %s\n", path, strerror(errno));
 	}
 	return -1;
 }
