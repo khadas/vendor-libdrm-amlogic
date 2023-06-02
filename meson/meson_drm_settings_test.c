@@ -29,7 +29,9 @@ int main(void )
     select_len = scanf("%d",&select_s_g);
     if (select_s_g == 1 && select_len == 1) {
         printf("get value: 1.HDCP version  2.HDMI connected 3.color space 4. color depth"
-               "5. hdr mode 6. mode 7. hdr policy 8. EDID 9. hdcp auth status\n");
+               "5. hdr mode 6. mode 7. hdr policy 8. EDID 9. hdcp auth status 10.supportedModesList"
+               " 11.prefer mode 12.HDCP Content Type 13.Content Type 14.Dv Enable 15.active "
+               " 16.vrr Enable 17.AVMute 18.Hdrcap 19.DvCap\n");
         int get = 0;
         int drmFd = meson_open_drm();
         int len = scanf("%d", &get);
@@ -91,10 +93,70 @@ int main(void )
             value = meson_drm_getHdcpAuthStatus( drmFd, MESON_CONNECTOR_HDMIA );
              printf("\n MESON_AUTH_STATUS_FAIL      = 0 \n"
                       " MESON_AUTH_STATUS_SUCCESS = 1 \n value:%d\n", value);
+        }  else if (get == 10 && len == 1) {
+            DisplayMode* modes = NULL;
+            int count = 0;
+            if (0 == meson_drm_getsupportedModesList(drmFd, &modes, &count )) {
+                printf("\n mode count:%d\n",count);
+                int i = 0;
+                for (int i=0; i<count; i++) {
+                    printf(" (%s %d %d %d %d)\n", modes[i].name, modes[i].w, modes[i].h, modes[i].interlace,modes[i].vrefresh);
+                }
+                if (modes)
+                    free(modes);
+            } else {
+                 printf("\n %s fail\n",__FUNCTION__);
+            }
+        } else if (get == 11 && len == 1) {
+            DisplayMode mode;
+            if (0 == meson_drm_getPreferredMode(&mode)) {
+                printf(" (%s %d %d %d)\n", mode.name, mode.w, mode.h, mode.interlace);
+            } else {
+                 printf("\n %s fail\n",__FUNCTION__);
+            }
+        } else if (get == 12 && len == 1) {
+            ENUM_MESON_HDCP_Content_Type value = MESON_HDCP_Type_RESERVED;
+            value = meson_drm_getHDCPContentType(drmFd, MESON_CONNECTOR_HDMIA);
+            printf("\n MESON_HDCP_Type0      = 0 \n"
+                      " MESON_HDCP_Type1 = 1 \n value:%d\n", value);
+        } else if (get == 13 && len == 1) {
+            ENUM_MESON_COLOR_SPACE value = meson_drm_getContentType( drmFd, MESON_CONNECTOR_HDMIA );
+            printf("\n MESON_Content_Type_Data      = 0 \n"
+                      "MESON_Content_Type_Graphics = 1 \n"
+                      "MESON_Content_Type_Photo = 2 \n"
+                      "MESON_Content_Type_Cinema = 3 \n"
+                      "MESON_Content_Type_Game = 4 \n value:%d\n"
+                      , value);
+        } else if (get == 14 && len == 1) {
+            int value = meson_drm_getDvEnable( drmFd, MESON_CONNECTOR_HDMIA );
+            printf("\n Dv_Enable:%d\n",value);
+            if (value == 1) {
+                printf("Support Dolbyvision\n");
+            } else {
+                printf("Dolbyvision not supported\n");
+            }
+        } else if (get == 15 && len == 1) {
+            int value = meson_drm_getActive( drmFd, MESON_CONNECTOR_HDMIA );
+            printf("\n Active:%d\n",value);
+        } else if (get == 16 && len == 1) {
+            int value = meson_drm_getVrrEnabled( drmFd, MESON_CONNECTOR_HDMIA );
+            printf("\n Vrr_Enabled:%d\n",value);
+        } else if (get == 17 && len == 1) {
+            int value = meson_drm_getAVMute( drmFd, MESON_CONNECTOR_HDMIA );
+            printf("\n AVMute:%d\n",value);
+        }  else if (get == 18 && len == 1) {
+            // presents the RX HDR capability
+            int value = meson_drm_getHdrCap( drmFd, MESON_CONNECTOR_HDMIA );
+            printf("\n HdrCap:%d\n",value);
+        } else if (get == 19 && len == 1) {
+            // presents the RX dolbyvision capability, [r] such as std or ll mode
+            int value = meson_drm_getDvCap( drmFd, MESON_CONNECTOR_HDMIA );
+            printf("\n DvCap:%d\n",value);
         }
         meson_close_drm(drmFd);
     } else if (select_s_g == 0 && select_len == 1) {
-        printf("set value:1.av mute 2.HDMI HDCP enable \n");
+        printf("set value:1.av mute 2.HDMI HDCP enable  3.HDCP Content Type "
+             " 4.DvEnable 5.active 6.vrr Enable\n");
         int set = 0;
         int ret = -1;
         drmModeAtomicReq * req;
@@ -126,7 +188,47 @@ int main(void )
             len = scanf("%d", &hdcpEnable);
             if (len == 1) {
                 if (meson_drm_setHDCPEnable( drmFd, req, hdcpEnable, MESON_CONNECTOR_HDMIA))
-                    printf("\n meson_drm_setAVMute fail:\n");
+                    printf("\n meson_drm_setHDCPEnable fail:\n");
+                } else {
+                    printf("\n scanf fail\n");
+                }
+        } else if (set == 3 && len == 1) {
+            printf("\n HDCP Content Type:\n");
+            int HDCPContentType = 0;
+            len = scanf("%d", &HDCPContentType);
+            if (len == 1) {
+                if (meson_drm_setHDCPContentType( drmFd, req, HDCPContentType, MESON_CONNECTOR_HDMIA))
+                    printf("\n meson_drm_setHDCPContentType fail:\n");
+                } else {
+                    printf("\n scanf fail\n");
+                }
+        } else if (set == 4 && len == 1) {
+            printf("\n DvEnable:\n");
+            int dvEnable = 0;
+            len = scanf("%d", &dvEnable);
+            if (len == 1) {
+                if (meson_drm_setDvEnable( drmFd, req, dvEnable, MESON_CONNECTOR_HDMIA))
+                    printf("\n meson_drm_setDv_Enable fail:\n");
+                } else {
+                    printf("\n scanf fail\n");
+                }
+        } else if (set == 5 && len == 1) {
+            printf("\n Active:\n");
+            int active = 0;
+            len = scanf("%d", &active);
+            if (len == 1) {
+                if (meson_drm_setActive( drmFd, req, active, MESON_CONNECTOR_HDMIA))
+                    printf("\n meson_drm_setActive fail:\n");
+                } else {
+                    printf("\n scanf fail\n");
+                }
+        } else if (set == 6 && len == 1) {
+            printf("\n vrr Enable:\n");
+            int vrrEnable = 0;
+            len = scanf("%d", &vrrEnable);
+            if (len == 1) {
+                if (meson_drm_setVrrEnabled( drmFd, req, vrrEnable, MESON_CONNECTOR_HDMIA))
+                    printf("\n meson_drm_setVrr_Enabled fail:\n");
                 } else {
                     printf("\n scanf fail\n");
                 }
