@@ -6,7 +6,6 @@
  *
  * Description:
  */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -17,6 +16,7 @@
 
 #include "meson_drm_event.h"
 #include "meson_drm_display.h"
+#include "meson_drm_log.h"
 
 #ifndef XDG_RUNTIME_DIR
 #define XDG_RUNTIME_DIR     "/run"
@@ -36,10 +36,10 @@ void startDisplayUeventMonitor()
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED);
-    printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+    DEBUG("[%s:%d]\n", __FUNCTION__, __LINE__);
     err = pthread_create (&event_monitor_threadId, &attr,uevent_monitor_thread,NULL);
     if (err) {
-        printf("DSHAL : Failed to Ceate HDMI Hot Plug Thread ....\r\n");
+        ERROR("DSHAL : Failed to Ceate HDMI Hot Plug Thread ....\r\n");
         event_monitor_threadId = -1;
     }
 }
@@ -47,12 +47,11 @@ void stopDisplayUeventMonitor()
 {
     isMonitoringAlive = false;
 }
-
 bool RegisterDisplayEventCallback(displayEventCallback cb)
 {
     bool ret = true;
     if (cb == NULL) {
-        printf("ERROR[%s:%d] argument NULL\n", __FUNCTION__, __LINE__);
+        ERROR("ERROR[%s:%d] argument NULL\n", __FUNCTION__, __LINE__);
         ret = false;
     } else {
         _DisplayEventCb = cb;
@@ -75,7 +74,7 @@ bool get_hdcp_status(ENUM_HDCP_STATUS *status)
 
 static void* uevent_monitor_thread(void *arg)
 {
-    printf("[%s:%d]start\n", __FUNCTION__, __LINE__);
+    DEBUG("[%s:%d]start\n", __FUNCTION__, __LINE__);
     bool wasConnected = false;
     struct udev *udev = NULL;
     struct udev_device *dev = NULL;
@@ -88,7 +87,7 @@ static void* uevent_monitor_thread(void *arg)
     /* create udev object */
     udev = udev_new();
     if (!udev) {
-        printf("ERROR[%s:%d] Can't create udev monitor for DRM,\n", __FUNCTION__, __LINE__);
+        ERROR("ERROR[%s:%d] Can't create udev monitor for DRM", __FUNCTION__, __LINE__);
     } else {
         mon = udev_monitor_new_from_netlink(udev, LIBUDEV_EVT_TYPE_KERNEL);
         if (mon) {
@@ -97,13 +96,13 @@ static void* uevent_monitor_thread(void *arg)
             struct timeval tv;
             int ret;
             if ((fd = udev_monitor_get_fd(mon)) < 0) {
-                printf("ERROR[%s:%d] udev_monitor_get_fd failed,\n", __FUNCTION__, __LINE__);
+                ERROR("ERROR[%s:%d] udev_monitor_get_fd failed,\n", __FUNCTION__, __LINE__);
             } else {
                 if (udev_monitor_filter_add_match_subsystem_devtype(mon, LIBUDEV_SUBSYSTEM_DRM, NULL) < 0) {
-                    printf("ERROR[%s:%d] udev_monitor_filter_add_match_subsystem_devtype failed,\n", __FUNCTION__, __LINE__);
+                    ERROR("ERROR[%s:%d] udev_monitor_filter_add_match_subsystem_devtype failed,\n", __FUNCTION__, __LINE__);
                 } else {
                     if (udev_monitor_enable_receiving(mon) < 0) {
-                        printf("ERROR[%s:%d] udev_monitor_enable_receiving\n", __FUNCTION__, __LINE__);
+                        DEBUG("ERROR[%s:%d] udev_monitor_enable_receiving\n", __FUNCTION__, __LINE__);
                     } else {
                         while (isMonitoringAlive) {
                             FD_ZERO(&fds);
@@ -115,13 +114,13 @@ static void* uevent_monitor_thread(void *arg)
                                 dev = udev_monitor_receive_device(mon);
                                 if (dev) {
                                     if (!strcmp(udev_device_get_action(dev), "change")) {
-                                        printf("I: ACTION=%s\n", udev_device_get_action(dev));
-                                        printf("I: DEVNAME=%s\n", udev_device_get_sysname(dev));
-                                        printf("I: DEVPATH=%s\n", udev_device_get_devpath(dev));
+                                        DEBUG("I: ACTION=%s\n", udev_device_get_action(dev));
+                                        DEBUG("I: DEVNAME=%s\n", udev_device_get_sysname(dev));
+                                        DEBUG("I: DEVPATH=%s\n", udev_device_get_devpath(dev));
                                         enConnection = meson_drm_getConnection();
                                         if ( enPreConnection != enConnection) {
                                             enPreConnection = enConnection;
-                                            printf("Send %s HDMI Hot Plug Event !!!\n",
+                                            DEBUG("Send %s HDMI Hot Plug Event !!!\n",
                                                     (enConnection ? "Connect":"DisConnect"));
                                             enDisplayEvent = enConnection ? DISPLAY_EVENT_CONNECTED:DISPLAY_EVENT_DISCONNECTED;
                                             if (_DisplayEventCb) {
@@ -129,11 +128,11 @@ static void* uevent_monitor_thread(void *arg)
                                             }
                                         }
                                         if ( !get_hdcp_status(&enCurStatus) )
-                                            printf("%s:%d: get_hdcp_status fail\n", __func__, __LINE__);
+                                            ERROR("%s:%d: get_hdcp_status fail", __func__, __LINE__);
                                         if ( enCurStatus != enPreStatus ) {
                                             enPreStatus = enCurStatus;
                                             enDisplayEvent = enCurStatus ? DISPLAY_HDCP_AUTHENTICATIONFAILURE:DISPLAY_HDCP_AUTHENTICATED;
-                                            printf("Send %s !!!\n", (enCurStatus ? "DISPLAY_HDCP_AUTHENTICATIONFAILURE":"DISPLAY_HDCP_AUTHENTICATED"));
+                                            DEBUG("Send %s !!!\n", (enCurStatus ? "DISPLAY_HDCP_AUTHENTICATIONFAILURE":"DISPLAY_HDCP_AUTHENTICATED"));
                                             if (_DisplayEventCb) {
                                                 _DisplayEventCb( enDisplayEvent, NULL);
                                             }
@@ -143,7 +142,7 @@ static void* uevent_monitor_thread(void *arg)
                                     udev_device_unref(dev);
                                 }
                                 else {
-                                    printf("I:[%s:%d] udev_monitor_receive_device failed\n", __FUNCTION__, __LINE__);
+                                    DEBUG("I:[%s:%d] udev_monitor_receive_device failed", __FUNCTION__, __LINE__);
                                     enConnection = MESON_DRM_UNKNOWNCONNECTION;
                                     enPreConnection = MESON_DRM_UNKNOWNCONNECTION;
                                 }
@@ -155,7 +154,7 @@ static void* uevent_monitor_thread(void *arg)
                 }
             }
         } else {
-            printf("ERROR[%s:%d] udev_monitor_new_from_netlink failed\n", __FUNCTION__, __LINE__);
+            ERROR("ERROR[%s:%d] udev_monitor_new_from_netlink failed", __FUNCTION__, __LINE__);
         }
     }
     udev = NULL;

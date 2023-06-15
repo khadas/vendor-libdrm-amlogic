@@ -1,5 +1,4 @@
 LOCAL_PATH = $(shell pwd)
-
 MIN_GCC_VERSION = "10"
 GCC_VERSION := "`$(CC) -dumpversion | cut -f1 -d'.'`"
 IS_GCC_ABOVE_MIN_VERSION := $(shell expr "$(GCC_VERSION)" ">=" "$(MIN_GCC_VERSION)")
@@ -21,7 +20,8 @@ meson_drm_SRCS = \
 	$(LOCAL_PATH)/meson_drm_util.c  \
 	$(LOCAL_PATH)/meson_drm_display.c  \
 	$(LOCAL_PATH)/meson_drm_event.c  \
-        $(LOCAL_PATH)/meson_drm_settings.c  \
+	$(LOCAL_PATH)/meson_drm_settings.c  \
+	$(LOCAL_PATH)/meson_drm_log.c  \
 	$(NULL)
 
 meson_drm_HEADERS = \
