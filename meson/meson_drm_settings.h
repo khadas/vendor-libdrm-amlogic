@@ -19,6 +19,12 @@ extern "C" {
 #endif
 #define DRM_DISPLAY_MODE_LEN 32
 
+struct video_zpos {
+    unsigned int index;//<--Representing video index  Index 0 corresponds to modifying video 0;Index 1 corresponds to modifying video 1-->//
+    unsigned int zpos; //<--Represents the zorder value set-->//
+    unsigned int flag; //<-- Make the settings effective Set flag equal to 1 to indicate effectiveness-->//
+};
+
 typedef enum _MESON_CONTENT_TYPE {
     MESON_CONTENT_TYPE_Data      = 0,
     MESON_CONTENT_TYPE_Graphics,
@@ -152,6 +158,7 @@ int meson_drm_getHdcpVer( int drmFd, MESON_CONNECTOR_TYPE connType );
 
 int meson_drm_getHdrCap( int drmFd, MESON_CONNECTOR_TYPE connType );
 int meson_drm_getDvCap( int drmFd, MESON_CONNECTOR_TYPE connType );
+int meson_drm_setVideoZorder(int drmFd, unsigned int index, unsigned int zorder, unsigned int flag);
 
 int meson_open_drm();
 void meson_close_drm(int drmFd);

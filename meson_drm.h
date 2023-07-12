@@ -2,7 +2,6 @@
 /*
  * Copyright © 2019-2022 Amlogic Inc.
  */
-
 #ifndef _MESON_DRM_H
 #define _MESON_DRM_H
 
@@ -38,6 +37,12 @@ struct drm_meson_gem_create {
 	__u32 handle;
 };
 
+struct drm_meson_video_zpos_target {
+	__u32 index;
+	__u32 zpos;
+	__u32 flag;
+};
+
 /*Memory related.*/
 #define DRM_IOCTL_MESON_GEM_CREATE		DRM_IOWR(DRM_COMMAND_BASE + \
 		0x00, struct drm_meson_gem_create)
@@ -47,5 +52,8 @@ struct drm_meson_gem_create {
 /*KMS related.*/
 #define DRM_IOCTL_MESON_ASYNC_ATOMIC	DRM_IOWR(DRM_COMMAND_BASE + \
 		0x10, struct drm_mode_atomic)
+
+#define DRM_IOCTL_MESON_SET_VIDEO_ZPOS		DRM_IOWR(DRM_COMMAND_BASE + \
+		0x11, struct drm_meson_video_zpos_target)
 
 #endif /* _MESON_DRM_H */

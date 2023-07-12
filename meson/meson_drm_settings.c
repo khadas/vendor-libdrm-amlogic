@@ -18,6 +18,7 @@
 #include "libdrm_meson_property.h"
 #include "meson_drm_settings.h"
 #include "meson_drm_log.h"
+#include "meson_drm.h"
 
 #define DEFAULT_CARD "/dev/dri/card0"
 #define PROP_NAME_MAX_LEN 50
@@ -996,3 +997,19 @@ int meson_drm_getDvCap( int drmFd, MESON_CONNECTOR_TYPE connType )
     return value;
 }
 
+int meson_drm_setVideoZorder(int drmFd, unsigned int index, unsigned int zorder, unsigned int flag) {
+    int ret = -1;
+    struct video_zpos zpos;
+    if ( drmFd < 0) {
+        ERROR("%s  %d drmFd < 0",__FUNCTION__,__LINE__);
+        return ret;
+    }
+    zpos.flag = flag;
+    zpos.index = index;
+    zpos.zpos = zorder;
+    ret = drmIoctl(drmFd, DRM_IOCTL_MESON_SET_VIDEO_ZPOS, &zpos);
+    if (ret) {
+        ERROR("\n failed to create object[%s].\n",strerror(errno));
+    }
+    return ret;
+}

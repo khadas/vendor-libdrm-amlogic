@@ -161,7 +161,7 @@ int main(void )
         meson_close_drm(drmFd);
     } else if (select_s_g == 0 && select_len == 1) {
         printf("set value:1.av mute 2.HDMI HDCP enable  3.HDCP Content Type "
-             " 4.DvEnable 5.active 6.vrr Enable\n");
+             " 4.DvEnable 5.active 6.vrr Enable 7.video zorder \n");
         int set = 0;
         int ret = -1;
         drmModeAtomicReq * req;
@@ -236,6 +236,19 @@ int main(void )
                     printf("\n meson_drm_setVrr_Enabled fail:\n");
                 } else {
                     printf("\n scanf fail\n");
+                }
+        } else if (set == 7 && len == 1) {
+            printf("\n please enter the parameters in order(index zorder flag): \n");
+            int zorder = 0;
+            int index = 0;
+            int flag = 0;
+            len = scanf("%d %d %d",&index,&zorder,&flag);
+            if (len == 3) {
+                int ret = meson_drm_setVideoZorder(drmFd, index, zorder, flag);
+                if (ret)
+                    printf("\n meson_drm_setVideoZorder fail:\n");
+                } else {
+                    printf("\n \ scanf fail \n");
                 }
         }
         ret = drmModeAtomicCommit(drmFd, req, DRM_MODE_ATOMIC_ALLOW_MODESET, NULL);
