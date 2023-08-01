@@ -55,7 +55,7 @@ int main(void )
             printf("\n color depth:%d\n",value);
         }
         else if (get == 5 && len == 1) {
-            ENUM_MESON_HDR_MODE value = meson_drm_getHdrStatus( drmFd, MESON_CONNECTOR_HDMIA );
+            ENUM_MESON_HDR_MODE value = meson_drm_getHdrStatus(drmFd, MESON_CONNECTOR_HDMIA );
             printf("\n MESON_HDR10PLUS      = 0 \n"
                      " MESON_DOLBYVISION_STD    \n"
                      " MESON_DOLBYVISION_LL    \n"
@@ -96,7 +96,7 @@ int main(void )
         }  else if (get == 10 && len == 1) {
             DisplayMode* modes = NULL;
             int count = 0;
-            if (0 == meson_drm_getsupportedModesList(drmFd, &modes, &count )) {
+            if (0 == meson_drm_getsupportedModesList(drmFd, &modes, &count ,MESON_CONNECTOR_HDMIA)) {
                 printf("\n mode count:%d\n",count);
                 int i = 0;
                 for (int i=0; i<count; i++) {
@@ -109,7 +109,7 @@ int main(void )
             }
         } else if (get == 11 && len == 1) {
             DisplayMode mode;
-            if (0 == meson_drm_getPreferredMode(&mode)) {
+            if (0 == meson_drm_getPreferredMode(&mode,MESON_CONNECTOR_HDMIA)) {
                 printf(" (%s %d %d %d)\n", mode.name, mode.w, mode.h, mode.interlace);
             } else {
                  printf("\n %s fail\n",__FUNCTION__);

@@ -156,7 +156,7 @@ static int meson_drm_set_property(int drmFd, drmModeAtomicReq *req, uint32_t obj
     return rc;
 }
 
-int meson_drm_getPreferredMode( DisplayMode* mode) {
+int meson_drm_getPreferredMode( DisplayMode* mode, MESON_CONNECTOR_TYPE connType) {
     int ret = -1;
     int i = 0;
     int count = 0;
@@ -164,7 +164,7 @@ int meson_drm_getPreferredMode( DisplayMode* mode) {
     int drmFd = -1;
     struct mesonConnector* conn = NULL;
     drmFd = meson_open_drm();
-    conn = mesonConnectorCreate(drmFd, DRM_MODE_CONNECTOR_HDMIA);
+    conn = get_current_connector(drmFd, connType);
     if (conn == NULL || drmFd < 0)
     {
         ERROR("%s %d connector create fail",__FUNCTION__,__LINE__);
@@ -191,7 +191,7 @@ out:
     return ret;
 }
 
-int meson_drm_getsupportedModesList(int drmFd, DisplayMode** modeInfo, int* modeCount )
+int meson_drm_getsupportedModesList(int drmFd, DisplayMode** modeInfo, int* modeCount,MESON_CONNECTOR_TYPE connType )
 {
     int ret = -1;
     struct mesonConnector* conn = NULL;
@@ -199,7 +199,7 @@ int meson_drm_getsupportedModesList(int drmFd, DisplayMode** modeInfo, int* mode
         ERROR("%s %d invalid parameter return",__FUNCTION__,__LINE__);
         return ret;
     }
-    conn = mesonConnectorCreate(drmFd, DRM_MODE_CONNECTOR_HDMIA);
+    conn = get_current_connector(drmFd, connType);
     if (conn == NULL || drmFd < 0)
     {
         ERROR("%s %d connector create fail",__FUNCTION__,__LINE__);

@@ -140,8 +140,8 @@ ENUM_MESON_HDCPAUTH_STATUS meson_drm_getHdcpAuthStatus( int drmFd, MESON_CONNECT
 int meson_drm_setHDCPEnable(int drmFd, drmModeAtomicReq *req,
                        bool enable, MESON_CONNECTOR_TYPE connType);
 
-int meson_drm_getsupportedModesList(int drmFd, DisplayMode** modeInfo, int* modeCount );
-int meson_drm_getPreferredMode( DisplayMode* mode);
+int meson_drm_getsupportedModesList(int drmFd, DisplayMode** modeInfo, int* modeCount ,MESON_CONNECTOR_TYPE connType);
+int meson_drm_getPreferredMode( DisplayMode* mode, MESON_CONNECTOR_TYPE connType);
 
 int meson_drm_setHDCPContentType(int drmFd, drmModeAtomicReq *req,
                        ENUM_MESON_HDCP_Content_Type HDCPType, MESON_CONNECTOR_TYPE connType);
