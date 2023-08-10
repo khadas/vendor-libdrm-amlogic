@@ -39,7 +39,7 @@ static int meson_drm_get_prop_value(int drmFd, MESON_CONNECTOR_TYPE connType, ui
     struct mesonConnector* conn = NULL;
     if ( drmFd < 0 || name == NULL || propValue == NULL)
     {
-        ERROR("%s %d drmfd invalid, or property name invalid",__FUNCTION__,__LINE__);
+        ERROR(" %s %d drmfd invalid, or property name invalid",__FUNCTION__,__LINE__);
         goto out;
     }
     conn = get_current_connector(drmFd, connType);
@@ -99,6 +99,9 @@ static struct mesonConnector* get_current_connector(int drmFd, MESON_CONNECTOR_T
             break;
         case MESON_CONNECTOR_CVBS:
             drmConnType = DRM_MODE_CONNECTOR_TV;
+            break;
+        case MESON_CONNECTOR_DUMMY:
+            drmConnType = DRM_MODE_CONNECTOR_VIRTUAL;
             break;
         default :
             drmConnType = DRM_MODE_CONNECTOR_HDMIA;
