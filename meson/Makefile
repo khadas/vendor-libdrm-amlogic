@@ -73,6 +73,9 @@ install:
 	install -m 755 meson_drm_settings_test $(TARGET_DIR)/usr/bin/
 	cp meson_drmif.h $(STAGING_DIR)/usr/include/
 	cp meson_drm_util.h $(STAGING_DIR)/usr/include/
+	install -D -m 0644 meson_drm_settings.h $(STAGING_DIR)/usr/include/libdrm_meson/meson_drm_settings.h
+	install -D -m 0644 meson_drm_event.h $(STAGING_DIR)/usr/include/libdrm_meson/meson_drm_event.h
+	install -D -m 0644 meson_drm_log.h $(STAGING_DIR)/usr/include/libdrm_meson/meson_drm_log.h
 
 uninstall:
 	rm -f $(TARGET_DIR)/usr/lib/libdrm_meson.so
