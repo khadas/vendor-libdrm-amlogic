@@ -34,7 +34,7 @@ static int  _get_frac_rate_policy();
 static int meson_drm_setprop(int obj_id, char* prop_name, int prop_value )
 {
     int ret = -1;
-    DEBUG("meson_drm_setprop: obj_id %d, prop_name: %s, prop_value:%d",obj_id, prop_name,prop_value);
+    DEBUG("%s %d obj_id %d, prop_name: %s, prop_value:%d",__FUNCTION__,__LINE__,obj_id, prop_name,prop_value);
     char* xdgRunDir = getenv("XDG_RUNTIME_DIR");
     if (!xdgRunDir)
         xdgRunDir = XDG_RUNTIME_DIR;
@@ -43,19 +43,19 @@ static int meson_drm_setprop(int obj_id, char* prop_name, int prop_value )
             char cmdBuf[512] = {'\0'};
             snprintf(cmdBuf, sizeof(cmdBuf)-1, "export XDG_RUNTIME_DIR=%s;westeros-gl-console set property -s %d:%s:%d | grep \"Response\"",
                     xdgRunDir, obj_id, prop_name, prop_value);
-            DEBUG("Executing '%s'\n", cmdBuf);
+            DEBUG("%s %d Executing '%s'\n", __FUNCTION__,__LINE__,cmdBuf);
             FILE* fp = popen(cmdBuf, "r");
             if (NULL != fp) {
                 char output[64] = {'\0'};
                 while (fgets(output, sizeof(output)-1, fp)) {
                     if (strlen(output) && strstr(output, "[0:")) {
                         ret = 0;
-                        DEBUG("\n meson_drm_setprop:%s\n",output);
+                        DEBUG("%s %d output:%s",__FUNCTION__,__LINE__,output);
                     }
                 }
                 pclose(fp);
             } else {
-                ERROR("meson_drm_setprop: popen failed");
+            ERROR("%s %d open failed",__FUNCTION__,__LINE__);
             }
             if (ret != 0 ) {
                 if (strcmp(xdgRunDir, XDG_RUNTIME_DIR) == 0) {
@@ -71,7 +71,7 @@ static int meson_drm_setprop(int obj_id, char* prop_name, int prop_value )
 static uint32_t _getHDRSupportedList(uint64_t hdrlist, uint64_t dvlist)
 {
     uint32_t ret = 0;
-    DEBUG("\n _getHDRSupportedList hdrlist:%llu, dvlist:%llu\n", hdrlist, dvlist);
+    DEBUG("%s %d hdrlist:%llu, dvlist:%llu",__FUNCTION__,__LINE__, hdrlist, dvlist);
     if (!!(hdrlist & 0x1))
         ret = ret | (0x1 << (int)MESON_DRM_HDR10PLUS);
 
@@ -112,7 +112,7 @@ int meson_drm_setMode(DisplayMode* mode)
         do {
             snprintf(cmdBuf, sizeof(cmdBuf)-1, "export XDG_RUNTIME_DIR=%s;westeros-gl-console set mode %s | grep \"Response\"",
                     xdgRunDir, modeSet);
-            DEBUG("Executing '%s'\n", cmdBuf);
+            DEBUG("%s %d Executing '%s'",__FUNCTION__,__LINE__, cmdBuf);
             /* FIXME: popen in use */
             FILE* fp = popen(cmdBuf, "r");
             if (NULL != fp) {
@@ -125,12 +125,12 @@ int meson_drm_setMode(DisplayMode* mode)
                 }
                 pclose(fp);
             } else {
-                ERROR(" popen failed\n");
+                ERROR("%s %d popen failed",__FUNCTION__,__LINE__);
                 ret = -1;
             }
             if (ret != 0 ) {
                 if (strcmp(xdgRunDir, XDG_RUNTIME_DIR) == 0) {
-                    ERROR("meson_drm_setMode: failed !!");
+                    ERROR("%s %d failed !!",__FUNCTION__,__LINE__);
                     break;
                 }
                 xdgRunDir = XDG_RUNTIME_DIR;
@@ -307,7 +307,7 @@ ENUM_MESON_DRM_CONNECTION meson_drm_getConnection()
             ret = MESON_DRM_UNKNOWNCONNECTION;
         }
     } else {
-        ERROR(" drm open fail");
+        ERROR("%s %d drm open fail",__FUNCTION__,__LINE__);
     }
     if (conn)
         mesonConnectorDestroy(drmFd,conn);
@@ -323,7 +323,7 @@ int meson_drm_set_prop( ENUM_MESON_DRM_PROP enProp, int prop_value )
     char propName[50] = {'\0'};
     bool force1_4 = false;
     if (enProp >= ENUM_DRM_PROP_MAX) {
-        INFO("%s %d invalid para",__FUNCTION__,__LINE__);
+        ERROR("%s %d invalid para",__FUNCTION__,__LINE__);
         goto out;
     }
     int drmFd = -1;
@@ -415,7 +415,7 @@ int meson_drm_get_prop( ENUM_MESON_DRM_PROP enProp, uint32_t* prop_value )
     int objtype = -1;
     char propName[50] = {'\0'};
     if (!prop_value || enProp >= ENUM_DRM_PROP_MAX) {
-        DEBUG("%s %d invalid para",__FUNCTION__,__LINE__);
+        ERROR("%s %d invalid para",__FUNCTION__,__LINE__);
         goto out;
     }
     int drmFd = -1;
@@ -424,7 +424,7 @@ int meson_drm_get_prop( ENUM_MESON_DRM_PROP enProp, uint32_t* prop_value )
     conn = mesonConnectorCreate(drmFd, DRM_MODE_CONNECTOR_HDMIA);
     if (conn == NULL || drmFd < 0)
     {
-        ERROR("\n%s %d connector create fail\n",__FUNCTION__,__LINE__);
+        ERROR("%s %d connector create fail",__FUNCTION__,__LINE__);
         goto out;
     }
     switch (enProp)
@@ -512,11 +512,11 @@ int meson_drm_get_prop( ENUM_MESON_DRM_PROP enProp, uint32_t* prop_value )
     struct mesonProperty* meson_prop = NULL;
     meson_prop = mesonPropertyCreate(drmFd, objID, objtype, propName);
     if (!meson_prop) {
-        ERROR("meson_prop create fail");
+        ERROR("%s %d meson_prop create fail",__FUNCTION__,__LINE__);
         goto out;
     }
     uint64_t value = mesonPropertyGetValue(meson_prop);
-    DEBUG("\n prop value:%llu objID:%d,name:%s\n",value, objID,propName);
+    DEBUG("%s %d prop value:%llu objID:%d,name:%s",__FUNCTION__,__LINE__,value, objID,propName);
     if (enProp == ENUM_DRM_PROP_HDMI_ENABLE)
         value = value ? 0:1;
     *prop_value = (uint32_t)value;
@@ -553,7 +553,7 @@ int meson_drm_get_prop( ENUM_MESON_DRM_PROP enProp, uint32_t* prop_value )
             meson_prop_HDCP = mesonPropertyCreate(drmFd, objID, objtype, propName);
             uint64_t value_3 = mesonPropertyGetValue(meson_prop_HDCP);
             mesonPropertyDestroy(meson_prop_HDCP);
-            DEBUG("\n prop value:%llu objID:%d,name:%s\n",value_3, objID,propName);
+            DEBUG("%s %d prop value:%llu objID:%d,name:%s",__FUNCTION__,__LINE__,value_3, objID,propName);
             if (value_3 == 1)
                 *prop_value = 2;
         }
@@ -578,7 +578,7 @@ int meson_drm_open()
     }
     ret_fd = open(card, O_RDONLY|O_CLOEXEC);
     if ( ret_fd < 0 )
-        ERROR(" drm card:%s open fail",card);
+        ERROR("%s %d drm card:%s open fail",__FUNCTION__,__LINE__,card);
     else
         drmDropMaster(ret_fd);
     return ret_fd;
@@ -648,7 +648,7 @@ int meson_drm_get_vblank_time(int drmFd, int nextVsync,uint64_t *vblankTime, uin
     struct mesonConnector* connector = NULL;
     drmModeModeInfo* mode = NULL;
     if (drmFd < 0) {
-        ERROR(" drmFd error");
+        ERROR("%s %d drmFd < 0",__FUNCTION__,__LINE__);
         goto out;
     }
     if (nextVsync < 0)
@@ -672,7 +672,7 @@ int meson_drm_get_vblank_time(int drmFd, int nextVsync,uint64_t *vblankTime, uin
     vbl.request.signal= 0;
     rc = drmWaitVBlank(drmFd, &vbl );
     if (rc != 0 ) {
-        ERROR("drmWaitVBlank failed: rc %d errno %d",rc, errno);
+        ERROR("%s %d drmWaitVBlank failed: rc %d errno %d",__FUNCTION__,__LINE__,rc, errno);
         ret = -1;
         goto out;
     }

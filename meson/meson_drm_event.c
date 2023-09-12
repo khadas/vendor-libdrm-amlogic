@@ -36,10 +36,10 @@ void startDisplayUeventMonitor()
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED);
-    DEBUG("[%s:%d]\n", __FUNCTION__, __LINE__);
+    DEBUG("[%s:%d]", __FUNCTION__, __LINE__);
     err = pthread_create (&event_monitor_threadId, &attr,uevent_monitor_thread,NULL);
     if (err) {
-        ERROR("DSHAL : Failed to Ceate HDMI Hot Plug Thread ....\r\n");
+        ERROR("%s %d DSHAL : Failed to Ceate HDMI Hot Plug Thread ....\r",__FUNCTION__, __LINE__);
         event_monitor_threadId = -1;
     }
 }
@@ -51,7 +51,7 @@ bool RegisterDisplayEventCallback(displayEventCallback cb)
 {
     bool ret = true;
     if (cb == NULL) {
-        ERROR("ERROR[%s:%d] argument NULL\n", __FUNCTION__, __LINE__);
+        ERROR("ERROR[%s:%d] argument NULL",__FUNCTION__, __LINE__);
         ret = false;
     } else {
         _DisplayEventCb = cb;
@@ -74,7 +74,7 @@ bool get_hdcp_status(ENUM_HDCP_STATUS *status)
 
 static void* uevent_monitor_thread(void *arg)
 {
-    DEBUG("[%s:%d]start\n", __FUNCTION__, __LINE__);
+    DEBUG("[%s:%d]start", __FUNCTION__, __LINE__);
     bool wasConnected = false;
     struct udev *udev = NULL;
     struct udev_device *dev = NULL;
@@ -96,13 +96,13 @@ static void* uevent_monitor_thread(void *arg)
             struct timeval tv;
             int ret;
             if ((fd = udev_monitor_get_fd(mon)) < 0) {
-                ERROR("ERROR[%s:%d] udev_monitor_get_fd failed,\n", __FUNCTION__, __LINE__);
+                ERROR("ERROR[%s:%d] udev_monitor_get_fd failed", __FUNCTION__, __LINE__);
             } else {
                 if (udev_monitor_filter_add_match_subsystem_devtype(mon, LIBUDEV_SUBSYSTEM_DRM, NULL) < 0) {
-                    ERROR("ERROR[%s:%d] udev_monitor_filter_add_match_subsystem_devtype failed,\n", __FUNCTION__, __LINE__);
+                    ERROR("ERROR[%s:%d] udev_monitor_filter_add_match_subsystem_devtype failed", __FUNCTION__, __LINE__);
                 } else {
                     if (udev_monitor_enable_receiving(mon) < 0) {
-                        DEBUG("ERROR[%s:%d] udev_monitor_enable_receiving\n", __FUNCTION__, __LINE__);
+                        ERROR("ERROR[%s:%d] udev_monitor_enable_receiving", __FUNCTION__, __LINE__);
                     } else {
                         while (isMonitoringAlive) {
                             FD_ZERO(&fds);
@@ -114,13 +114,13 @@ static void* uevent_monitor_thread(void *arg)
                                 dev = udev_monitor_receive_device(mon);
                                 if (dev) {
                                     if (!strcmp(udev_device_get_action(dev), "change")) {
-                                        DEBUG("I: ACTION=%s\n", udev_device_get_action(dev));
-                                        DEBUG("I: DEVNAME=%s\n", udev_device_get_sysname(dev));
-                                        DEBUG("I: DEVPATH=%s\n", udev_device_get_devpath(dev));
+                                        DEBUG("%s %d I: ACTION=%s",__FUNCTION__, __LINE__, udev_device_get_action(dev));
+                                        DEBUG("%s %d I: DEVNAME=%s",__FUNCTION__, __LINE__, udev_device_get_sysname(dev));
+                                        DEBUG("%s %d I: DEVPATH=%s",__FUNCTION__, __LINE__, udev_device_get_devpath(dev));
                                         enConnection = meson_drm_getConnection();
                                         if ( enPreConnection != enConnection) {
                                             enPreConnection = enConnection;
-                                            DEBUG("Send %s HDMI Hot Plug Event !!!\n",
+                                            DEBUG("%s %d Send %s HDMI Hot Plug Event !!!",__FUNCTION__, __LINE__,
                                                     (enConnection ? "Connect":"DisConnect"));
                                             enDisplayEvent = enConnection ? DISPLAY_EVENT_CONNECTED:DISPLAY_EVENT_DISCONNECTED;
                                             if (_DisplayEventCb) {
@@ -132,7 +132,7 @@ static void* uevent_monitor_thread(void *arg)
                                         if ( enCurStatus != enPreStatus ) {
                                             enPreStatus = enCurStatus;
                                             enDisplayEvent = enCurStatus ? DISPLAY_HDCP_AUTHENTICATIONFAILURE:DISPLAY_HDCP_AUTHENTICATED;
-                                            DEBUG("Send %s !!!\n", (enCurStatus ? "DISPLAY_HDCP_AUTHENTICATIONFAILURE":"DISPLAY_HDCP_AUTHENTICATED"));
+                                            DEBUG("%s %d Send %s !!!\n",__FUNCTION__, __LINE__, (enCurStatus ? "DISPLAY_HDCP_AUTHENTICATIONFAILURE":"DISPLAY_HDCP_AUTHENTICATED"));
                                             if (_DisplayEventCb) {
                                                 _DisplayEventCb( enDisplayEvent, NULL);
                                             }
@@ -142,7 +142,7 @@ static void* uevent_monitor_thread(void *arg)
                                     udev_device_unref(dev);
                                 }
                                 else {
-                                    DEBUG("I:[%s:%d] udev_monitor_receive_device failed", __FUNCTION__, __LINE__);
+                                    ERROR("I:[%s:%d] udev_monitor_receive_device failed", __FUNCTION__, __LINE__);
                                     enConnection = MESON_DRM_UNKNOWNCONNECTION;
                                     enPreConnection = MESON_DRM_UNKNOWNCONNECTION;
                                 }

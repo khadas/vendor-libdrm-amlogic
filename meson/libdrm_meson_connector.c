@@ -60,12 +60,12 @@ struct mesonConnector *mesonConnectorCreate(int drmFd, int type)
 	res= drmModeGetResources( drmFd );
 	ret = (struct mesonConnector*)calloc( 1,sizeof(struct mesonConnector) );
 	if ( !ret ) {
-		DEBUG("mesonConnectorCreate:mesonConnector create fail");
+		ERROR("%s %d mesonConnector create fail",__FUNCTION__,__LINE__);
 		goto exit;
 	}
 	if ( !res )
 	{
-		ERROR("mesonConnectorCreate: failed to get resources from drmFd (%d)", drmFd);
+		ERROR("%s %d failed to get resources from drmFd (%d)", __FUNCTION__,__LINE__,drmFd);
 		ret = NULL;
 		goto exit;
 	}
@@ -96,7 +96,7 @@ struct mesonConnector *mesonConnectorCreate(int drmFd, int type)
 		if (cur_encoder)
 			ret->crtc_id = cur_encoder->crtc_id;
 		else {
-			DEBUG("cur encoder not exit, get crtcs[0]:%d ",res->crtcs[0]);
+			DEBUG("%s %d cur encoder not exit, get crtcs[0]:%d ",__FUNCTION__,__LINE__,res->crtcs[0]);
 			ret->crtc_id = res->crtcs[0];
 		}
 		drmModeFreeEncoder(cur_encoder);
@@ -104,7 +104,7 @@ struct mesonConnector *mesonConnectorCreate(int drmFd, int type)
 		if (ret->count_modes > 0) {
 			modes_info =  (drmModeModeInfo*)calloc( ret->count_modes, sizeof(drmModeModeInfo) );
 			if (!modes_info) {
-				ERROR("mesonConnectorCreate:calloc fail");
+				ERROR("%s %d calloc fail",__FUNCTION__,__LINE__);
 				goto exit;
 			}
 			memcpy(modes_info, conn->modes, ret->count_modes *sizeof(drmModeModeInfo));
@@ -150,15 +150,15 @@ int mesonConnectorUpdate(int drmFd, struct mesonConnector *connector)
 	conn= drmModeGetConnector( drmFd, connector->id );
 	//ret = (struct mesonConnector*)calloc( 1,sizeof(struct mesonConnector) );
 	if ( !connector ) {
-		ERROR("mesonConnectorUpdate:invalid parameters ");
+		ERROR("%s %d invalid parameters ",__FUNCTION__,__LINE__);
 		goto exit;
 	}
 	if ( !ret ) {
-		DEBUG("mesonConnectorUpdate:mesonConnector create fail");
+		ERROR("%s %d mesonConnector create fail",__FUNCTION__,__LINE__);
 		goto exit;
 	}
 	if ( !conn ) {
-		INFO("mesonConnectorCreate: unable to get connector for drmfd (%d) conn_id(%d)\n", drmFd,connector->id);
+		ERROR("%s %d mesonConnectorCreate: unable to get connector for drmfd (%d) conn_id(%d)\n",__FUNCTION__,__LINE__, drmFd,connector->id);
 	goto exit;
 	}
 	if ( conn ) {
@@ -229,7 +229,7 @@ int mesonConnectorGetId(struct mesonConnector* connector)
 	if ( connector ) {
 		return connector->id;
 	} else {
-		ERROR("mesonConnectorGetId:invalid parameters");
+		ERROR("%s %d invalid parameters",__FUNCTION__,__LINE__);
 		return 0;
 	}
 }
@@ -238,7 +238,7 @@ int mesonConnectorGetModes(struct mesonConnector * connector, int drmFd, drmMode
 {
 	int ret = -1;
 	if ( !connector || !count_modes ) {
-		ERROR("mesonConnectorGetModes:invalid parameters ");
+		ERROR("%s %d invalid parameters ",__FUNCTION__,__LINE__);
 	} else {
 		*count_modes = connector->count_modes;
 		*modes = connector->modes;
@@ -251,7 +251,7 @@ int mesonConnectorGetEdidBlob(struct mesonConnector* connector, int * data_Len, 
 {
 	int ret = -1;
 	if ( !connector || !data_Len ) {
-		ERROR("mesonConnectorGetEdidBlob:invalid parameters ");
+		ERROR("%s %d invalid parameters ",__FUNCTION__,__LINE__);
 	} else {
 		*data_Len = connector->edid_data_Len;
 		*data = connector->edid_data;
@@ -264,7 +264,7 @@ int mesonConnectorGetConnectState(struct mesonConnector* connector)
 {
 	int ret = -1;
 	if ( !connector ) {
-			ERROR("mesonConnectorGetConnectState:invalid parameters ");
+			ERROR("%s %d invalid parameters ",__FUNCTION__,__LINE__);
 	} else {
 		ret = connector->connection;
 	}
@@ -274,7 +274,7 @@ int mesonConnectorGetCRTCId(struct mesonConnector* connector)
 {
 	int ret = -1;
 	if ( !connector ) {
-		ERROR("mesonConnectorGetCRTCId:invalid parameters ");
+		ERROR("%s %d invalid parameters ",__FUNCTION__,__LINE__);
 	} else {
 		ret = connector->crtc_id;
 	}
@@ -299,17 +299,17 @@ void dump_connector(struct mesonConnector* connector)
 	int j = 0;
 	drmModeModeInfo* mode = NULL;
 	if (connector) {
-		DEBUG("\n connector:\n");
-		DEBUG("id:%d\n",connector->id);
-		DEBUG("type:%d\n",connector->type);
-		DEBUG("connection:%d\n",connector->connection);
-		DEBUG("count_modes:%d\n",connector->count_modes);
-		DEBUG("modes:\n");
-		DEBUG("\tname refresh (Hz) hdisp hss hse htot vdisp "
-				   "vss vse vtot)\n");
+		DEBUG("%s %d connector",__FUNCTION__,__LINE__);
+		DEBUG("%s %d id: %d",__FUNCTION__,__LINE__,connector->id);
+		DEBUG("%s %d type: %d",__FUNCTION__,__LINE__,connector->type);
+		DEBUG("%s %d connection: %d",__FUNCTION__,__LINE__,connector->connection);
+		DEBUG("%s %d count_modes: %d",__FUNCTION__,__LINE__,connector->count_modes);
+		DEBUG("%s %d modes: ",__FUNCTION__,__LINE__);
+		DEBUG("%s %d \tname refresh (Hz) hdisp hss hse htot vdisp "
+				   "vss vse vtot)",__FUNCTION__,__LINE__);
 		for (j = 0; j < connector->count_modes; j++) {
 			mode = &connector->modes[j];
-			printf("  %s %d %d %d %d %d %d %d %d %d %d",
+			INFO("  %s %d %d %d %d %d %d %d %d %d %d",
 			mode->name,
 			mode->vrefresh,
 			mode->hdisplay,
@@ -322,13 +322,13 @@ void dump_connector(struct mesonConnector* connector)
 			mode->vtotal,
 			mode->clock);
 		}
-		INFO("edid_data_Len:%d\n",connector->edid_data_Len);
-		DEBUG("edid\n");
+		DEBUG("%s %d edid_data_Len: %d",__FUNCTION__,__LINE__,connector->edid_data_Len);
+		DEBUG("%s %d edid",__FUNCTION__,__LINE__);
 		for (i = 0; i < connector->edid_data_Len; i++) {
 			if (i % 16 == 0)
-				printf("\n\t\t\t");
-			INFO("%.2hhx", connector->edid_data[i]);
+				DEBUG("\n\t\t\t");
+			INFO("%s %d %.2hhx",__FUNCTION__,__LINE__, connector->edid_data[i]);
 		}
-		printf("\n");
+		DEBUG("\n");
 	}
 }

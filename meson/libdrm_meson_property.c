@@ -31,17 +31,17 @@ struct mesonProperty *mesonPropertyCreate(int drmFd, uint32_t drmObject, uint32_
 	uint64_t* values_temp = NULL;
 	uint32_t* blob_ids_temp = NULL;
 	if ( !props ) {
-		DEBUG("\t No properties:mesonPropertyCreate \n");
+		ERROR("%s %d No properties ",__FUNCTION__,__LINE__);
 		goto exit;
 	}
 	prop = (drmModePropertyPtr)calloc( 1, sizeof(drmModePropertyRes));
 	if ( !prop ) {
-		ERROR("mesonPropertyCreate alloc fail");
+		ERROR("%s %d alloc fail",__FUNCTION__,__LINE__);
 		goto exit;
 	}
 	ret = (struct mesonProperty*)calloc( 1,sizeof(struct mesonProperty) );
 	if ( !ret ) {
-		DEBUG("mesonPropertyCreate alloc mesonProperty fail");
+		ERROR("%s %d alloc mesonProperty fail",__FUNCTION__,__LINE__);
 		goto exit;
 	}
 	for (i = 0; i < props->count_props; i++) {
@@ -114,13 +114,13 @@ int mesonPropertyUpdateValue(int drmFd, struct mesonProperty *mesonProp)
 	uint64_t* values_temp = NULL;
 	uint32_t* blob_ids_temp = NULL;
 	if ( !mesonProp ) {
-		ERROR("mesonPropertyUpdateValue invalid parameter" );
+		ERROR("%s %d invalid parameter ",__FUNCTION__,__LINE__);
 		ret = -1;
 		goto exit;
 	}
 	props = drmModeObjectGetProperties(drmFd, mesonProp->mComponentId, mesonProp->drmObjectType);
 	if ( !props ) {
-		INFO("No properties:mesonPropertyUpdateValue ");
+		ERROR("%s %d No properties",__FUNCTION__,__LINE__);
 		ret = -1;
 		goto exit;
 	}
@@ -186,7 +186,7 @@ int mesonPropertyGetId(struct mesonProperty* mesonProp)
 	if ( mesonProp ) {
 		ret = mesonProp->prop_ptr->prop_id;
 	} else {
-		ERROR("mesonPropertyGetId invalid parameter ");
+		ERROR("%s %d invalid parameter ",__FUNCTION__,__LINE__);
 	}
 	return ret;
 }
@@ -197,7 +197,7 @@ uint64_t mesonPropertyGetValue(struct mesonProperty* mesonProp)
 	if ( mesonProp ) {
 		ret = mesonProp->mValue;
 	} else {
-		ERROR("mesonPropertyGetValue invalid parameter ");
+		ERROR("%s %d invalid parameter ",__FUNCTION__,__LINE__);
 	}
 	return ret;
 }
@@ -208,7 +208,7 @@ uint32_t mesonPropertyGetType(struct mesonProperty* mesonProp)
 	if ( mesonProp ) {
 		ret = mesonProp->mType;
 	} else {
-		ERROR("mesonPropertyGetType invalid parameter ");
+		ERROR("%s %d invalid parameter ",__FUNCTION__,__LINE__);
 	}
 	return ret;
 }
@@ -228,7 +228,7 @@ int mesonPropertyDestroy(struct mesonProperty* mesonProperty)
 		mesonProperty = NULL;
 		ret  = 0;
 	} else {
-		DEBUG("No properties:mesonPropertyUpdateValue ");
+		DEBUG("%s %d No properties:mesonProperty ",__FUNCTION__,__LINE__);
 	}
 	return ret;
 }
@@ -239,11 +239,11 @@ int mesonPropertyGetBlobData(struct mesonProperty* mseonProp, int drmFd, int* le
 	drmModePropertyBlobPtr blobProp =  NULL;
 	char *blob_data = NULL;
 	if (!mseonProp || !len ) {
-		ERROR(" mesonPropertyGetBlobData invalid parameter");
+		ERROR("%s %d invalid parameter",__FUNCTION__,__LINE__);
 		goto exit;
 	}
 	if (!drm_property_type_is(mseonProp->prop_ptr, DRM_MODE_PROP_BLOB)) {
-		DEBUG(" mesonPropertyGetBlobData invalid parameter is not a blob property!!!");
+		ERROR("%s %d invalid parameter is not a blob property!!!",__FUNCTION__,__LINE__);
 		goto exit;
 	}
 	if ( mseonProp && len ) {
@@ -259,7 +259,7 @@ int mesonPropertyGetBlobData(struct mesonProperty* mseonProp, int drmFd, int* le
 			*data = blob_data;
 		}
 		else
-			ERROR("mesonPropertyCreate alloc mesonProperty fail");
+			ERROR("%s %d mesonPropertyCreate alloc mesonProperty fail",__FUNCTION__,__LINE__);
 		drmModeFreePropertyBlob(blobProp);
 		ret = 0;
 	}
@@ -270,7 +270,7 @@ int mesonPropertyGetRange(struct mesonProperty* mesonProp, uint64_t * min, uint6
 {
 	int ret = -1;
 	if ( !mesonProp || !min || !max ) {
-		ERROR("mesonPropertyGetRange invalid parameter ");
+		ERROR("%s %d mesonPropertyGetRange invalid parameter ",__FUNCTION__,__LINE__);
 		goto exit;
 	}
 	if (drm_property_type_is(mesonProp->prop_ptr, DRM_MODE_PROP_SIGNED_RANGE) || drm_property_type_is(mesonProp->prop_ptr, DRM_MODE_PROP_RANGE)) {
@@ -278,7 +278,7 @@ int mesonPropertyGetRange(struct mesonProperty* mesonProp, uint64_t * min, uint6
 		*max = mesonProp->prop_ptr->values[1];
 		ret = 0;
 	} else {
-		DEBUG("mesonPropertyGetRange invalid parameter，not a range property ");
+		ERROR("%s %d invalid parameter，not a range property ",__FUNCTION__,__LINE__);
 	}
 exit:
 	return ret;
@@ -289,11 +289,11 @@ int mesonPropertyGetEnumTypes(struct mesonProperty* mesonProp, int *len, struct 
 {
 	int ret = -1;
 	if ( !mesonProp || !len || !enumTypes ) {
-		ERROR("\t mesonPropertyGetEnumTypes invalid parameter\n");
+		ERROR("%s %d mesonPropertyGetEnumTypes invalid parameter",__FUNCTION__,__LINE__);
 		goto exit;
 	}
 	if ( !mesonProp->prop_ptr ) {
-		DEBUG("\t mesonPropertyGetEnumTypes invalid parameter\n");
+		DEBUG("%s %d  mesonPropertyGetEnumTypes invalid parameter",__FUNCTION__,__LINE__);
 		goto exit;
 	}
 	if (drm_property_type_is(mesonProp->prop_ptr, DRM_MODE_PROP_ENUM)) {
@@ -301,7 +301,7 @@ int mesonPropertyGetEnumTypes(struct mesonProperty* mesonProp, int *len, struct 
 		*enumTypes = mesonProp->prop_ptr->enums;
 		ret = 0;
 	} else {
-		DEBUG("mesonPropertyGetRange invalid parameter，not a enum property ");
+		DEBUG("%s %d mesonPropertyGetRange invalid parameter，not a enum property ",__FUNCTION__,__LINE__);
 	}
 exit:
 	return ret;
@@ -309,52 +309,52 @@ exit:
 
 void dump_property(struct mesonProperty* mesonProp,int drmFd)
 {
-	DEBUG("dump_property ");
+	DEBUG("%s %d dump_property ",__FUNCTION__,__LINE__);
 	int i = 0;
 	if (mesonProp) {
-		DEBUG("name:%s\n",mesonProp->prop_ptr->name );
-		DEBUG("mComponentId:%d\n",mesonProp->mComponentId);
-		DEBUG("drmObjectType:%d\n",mesonProp->drmObjectType );
-		DEBUG("prop id:%d\n",mesonPropertyGetId(mesonProp) );
-		DEBUG("\t\tflags:" );
+		DEBUG("%s %d name:%s",__FUNCTION__,__LINE__,mesonProp->prop_ptr->name );
+		DEBUG("%s %d mComponentId:%d",__FUNCTION__,__LINE__,mesonProp->mComponentId);
+		DEBUG("%s %d drmObjectType:%d\n",__FUNCTION__,__LINE__,mesonProp->drmObjectType );
+		DEBUG("%s %d prop id:%d\n",__FUNCTION__,__LINE__,mesonPropertyGetId(mesonProp) );
+		DEBUG("%s %d \t\tflags:",__FUNCTION__,__LINE__);
 		if (mesonProp->drmObjectType & DRM_MODE_PROP_PENDING)
-			INFO(" pending");
+			INFO("%s %d pending",__FUNCTION__,__LINE__);
 		if (mesonProp->drmObjectType & DRM_MODE_PROP_IMMUTABLE)
-			INFO(" immutable");
+			INFO("%s %d immutable",__FUNCTION__,__LINE__);
 		if (drm_property_type_is(mesonProp->prop_ptr, DRM_MODE_PROP_SIGNED_RANGE))
-			INFO(" signed range");
+			INFO("%s %d signed range",__FUNCTION__,__LINE__);
 		if (drm_property_type_is(mesonProp->prop_ptr, DRM_MODE_PROP_RANGE))
-			INFO(" range");
+			INFO("%s %d range",__FUNCTION__,__LINE__);
 		if (drm_property_type_is(mesonProp->prop_ptr, DRM_MODE_PROP_ENUM))
-			INFO(" enum");
+			INFO("%s %d enum",__FUNCTION__,__LINE__);
 		if (drm_property_type_is(mesonProp->prop_ptr, DRM_MODE_PROP_BITMASK))
-			INFO(" bitmask");
+			INFO("%s %d bitmask",__FUNCTION__,__LINE__);
 		if (drm_property_type_is(mesonProp->prop_ptr, DRM_MODE_PROP_BLOB))
-			INFO(" blob");
+			INFO("%s %d blob",__FUNCTION__,__LINE__);
 		if (drm_property_type_is(mesonProp->prop_ptr, DRM_MODE_PROP_OBJECT))
-			INFO(" object");
-		printf("\n");
-		INFO("mValue:%d\n",(int)mesonProp->mValue);
+			INFO("%s %d object",__FUNCTION__,__LINE__);
+		DEBUG("\n");
+		INFO("%s %d mValue: %d",__FUNCTION__,__LINE__,(int)mesonProp->mValue);
 		if (drm_property_type_is(mesonProp->prop_ptr, DRM_MODE_PROP_SIGNED_RANGE) ||
 			drm_property_type_is(mesonProp->prop_ptr, DRM_MODE_PROP_RANGE) ) {
-			DEBUG("\t\t range:");
+			DEBUG("%s %d range:",__FUNCTION__,__LINE__);
 			uint64_t min = 0;
 			uint64_t max = 0;
 			mesonPropertyGetRange(mesonProp, &min, &max);
-			DEBUG("min:%d max:%d\n", (int)min, (int)max );
-			printf("\n");
+			DEBUG("%s %d min:%d max:%d\n",__FUNCTION__,__LINE__, (int)min, (int)max );
+			DEBUG("\n");
 		}
 		if (drm_property_type_is(mesonProp->prop_ptr, DRM_MODE_PROP_ENUM)) {
-			DEBUG("\t\tflags:" );
+			DEBUG("%s %d \t\tflags:",__FUNCTION__,__LINE__);
 			int enumTypeLen = 0;
 			struct drm_mode_property_enum** enumTypes = NULL;
 			mesonPropertyGetEnumTypes(mesonProp, &enumTypeLen, enumTypes );
-			INFO("enumTypeLen:%d\n",enumTypeLen);
+			DEBUG("%s %d enumTypeLen:%d\n",__FUNCTION__,__LINE__,enumTypeLen);
 			for ( i=0; i<enumTypeLen; i++ ) {
-				INFO("%s=%llu",(*enumTypes)[i].name,(*enumTypes)[i].value);
+				INFO("%s %d %s=%llu",__FUNCTION__,__LINE__,(*enumTypes)[i].name,(*enumTypes)[i].value);
 			}
 		}
-		DEBUG("\t\blob:");
+		DEBUG("%s %d \t\blob:",__FUNCTION__,__LINE__);
 		if (drm_property_type_is(mesonProp->prop_ptr, DRM_MODE_PROP_BLOB)) {
 			int blob_len = 0;
 			char** blob_data = NULL;
@@ -363,9 +363,9 @@ void dump_property(struct mesonProperty* mesonProp,int drmFd)
 			for (i = 0; i < blob_len; i++) {
 				if (i % 16 == 0)
 					printf("\n\t\t\t");
-				INFO("%x", (*blob_data)[i]);
+				INFO("%s %d %x", __FUNCTION__,__LINE__,(*blob_data)[i]);
 			}
-			printf("\n");
+			DEBUG("\n");
 			free(blob_data);
 		}
 	}

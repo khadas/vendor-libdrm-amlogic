@@ -52,3 +52,21 @@ void mesonDrmLog( int level, const char *fmt, ... )
       va_end( argptr );
    }
 }
+
+void mesonDrmEdidLog( int level, const char *fmt, ...)
+{
+   const char *env= getenv( "LIBMESON_GL_DEBUG" );
+   if ( env )
+   {
+      int level= atoi( env );
+      g_activeLevel= level;
+   }
+   if ( level <= g_activeLevel )
+   {
+      va_list argptr;
+      va_start( argptr, fmt );
+      vfprintf( stderr, fmt, argptr );
+      va_end( argptr );
+   }
+}
+
