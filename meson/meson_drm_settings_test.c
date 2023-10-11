@@ -31,7 +31,7 @@ int main(void )
         printf("get value: 1.HDCP version  2.HDMI connected 3.color space 4. color depth"
                "5. hdr mode 6. mode 7. hdr policy 8. EDID 9. hdcp auth status 10.supportedModesList"
                " 11.prefer mode 12.HDCP Content Type 13.Content Type 14.Dv Enable 15.active "
-               " 16.vrr Enable 17.AVMute 18.Hdrcap 19.DvCap\n");
+               " 16.vrr Enable 17.AVMute 18.Hdrcap 19.DvCap 20.default modeInfo\n");
         int get = 0;
         int drmFd = meson_open_drm();
         int len = scanf("%d", &get);
@@ -152,6 +152,11 @@ int main(void )
             // presents the RX dolbyvision capability, [r] such as std or ll mode
             int value = meson_drm_getDvCap( drmFd, MESON_CONNECTOR_HDMIA );
             printf("\n DvCap:%d\n",value);
+        } else if (get == 20 && len == 1) {
+            DisplayMode mode;
+            if (meson_drm_getModeInfo(drmFd, MESON_CONNECTOR_RESERVED, &mode ) == 0) {
+                printf("\n mode (%d %d %d %d)\n",mode.w, mode.h, mode.vrefresh, mode.interlace);
+            }
         }
         meson_close_drm(drmFd);
     } else if (select_s_g == 0 && select_len == 1) {

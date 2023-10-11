@@ -29,6 +29,8 @@ static int meson_drm_get_prop_value(int drmFd, MESON_CONNECTOR_TYPE connType,
                                      uint32_t objType, char* name, uint32_t* propValue );
 
 static struct mesonConnector* get_current_connector(int drmFd, MESON_CONNECTOR_TYPE connType);
+static struct mesonConnector* get_default_connector(int drmFd);
+
 static int meson_drm_set_property(int drmFd, drmModeAtomicReq *req, uint32_t objId,
                                   uint32_t objType, char* name, uint64_t value);
 
@@ -235,6 +237,42 @@ out:
     return ret;
 }
 
+struct mesonConnector* get_default_connector(int drmFd)
+{
+    struct mesonConnector* connectorHDMI = NULL;
+    struct mesonConnector* connectorLVDS = NULL;
+    struct mesonConnector* connectorCVBS = NULL;
+    int HDMIconnected = 0;
+    int LVDSConnected = 0;
+    int CVBSConnected = 0;
+
+    connectorHDMI = mesonConnectorCreate(drmFd, DRM_MODE_CONNECTOR_HDMIA);
+    if (connectorHDMI)
+        HDMIconnected = mesonConnectorGetConnectState(connectorHDMI);
+    if (HDMIconnected == 1) {
+        return connectorHDMI;
+    } else {
+        mesonConnectorDestroy(drmFd,connectorHDMI);
+        connectorLVDS = mesonConnectorCreate(drmFd, DRM_MODE_CONNECTOR_LVDS);
+        if (connectorLVDS)
+            LVDSConnected = mesonConnectorGetConnectState(connectorLVDS);
+        if (LVDSConnected == 1) {
+            return connectorLVDS;
+        } else {
+            mesonConnectorDestroy(drmFd,connectorLVDS);
+            connectorCVBS = mesonConnectorCreate(drmFd, DRM_MODE_CONNECTOR_TV);
+            if (connectorCVBS)
+                CVBSConnected = mesonConnectorGetConnectState(connectorCVBS);
+            if (CVBSConnected == 1) {
+                return connectorCVBS;
+            } else {
+                mesonConnectorDestroy(drmFd, connectorCVBS);
+                return NULL;
+            }
+        }
+    }
+}
+
 int meson_drm_getModeInfo(int drmFd, MESON_CONNECTOR_TYPE connType, DisplayMode* modeInfo)
 {
     int ret = -1;
@@ -244,7 +282,13 @@ int meson_drm_getModeInfo(int drmFd, MESON_CONNECTOR_TYPE connType, DisplayMode*
         ERROR("%s %d modeInfo == NULL || drmFd < 0 return",__FUNCTION__,__LINE__);
         return ret;
     }
-    conn = get_current_connector(drmFd, connType);
+    if ( connType == MESON_CONNECTOR_RESERVED ) {
+        conn = get_default_connector(drmFd);
+        DEBUG("%s %d get default connector",__FUNCTION__,__LINE__);
+    } else {
+        conn = get_current_connector(drmFd, connType);
+        DEBUG("%s %d get current connector",__FUNCTION__,__LINE__);
+    }
     if ( conn ) {
         mode = mesonConnectorGetCurMode(drmFd, conn);
         if (mode) {
