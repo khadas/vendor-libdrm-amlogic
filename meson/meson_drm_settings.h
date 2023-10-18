@@ -25,6 +25,13 @@ struct video_zpos {
     unsigned int flag; //<-- Make the settings effective Set flag equal to 1 to indicate effectiveness-->//
 };
 
+typedef enum _ENUM_MESON_ASPECTRATIO {
+    MESON_ASPECT_RATIO_AUTOMATIC  =0,
+    MESON_ASPECT_RATIO_4_3,
+    MESON_ASPECT_RATIO_16_9,
+    MESON_ASPECT_RATIO_RESERVED
+} ENUM_MESON_ASPECT_RATIO;
+
 typedef enum _MESON_CONTENT_TYPE {
     MESON_CONTENT_TYPE_Data      = 0,
     MESON_CONTENT_TYPE_Graphics,
@@ -160,6 +167,10 @@ int meson_drm_getHdrCap( int drmFd, MESON_CONNECTOR_TYPE connType );
 int meson_drm_getDvCap( int drmFd, MESON_CONNECTOR_TYPE connType );
 int meson_drm_setVideoZorder(int drmFd, unsigned int index, unsigned int zorder, unsigned int flag);
 int meson_drm_setPlaneMute(int drmFd, unsigned int plane_type, unsigned int plane_mute);
+
+ENUM_MESON_ASPECT_RATIO meson_drm_getAspectRatioValue( int drmFd, MESON_CONNECTOR_TYPE connType );
+int meson_drm_setAspectRatioValue(int drmFd, drmModeAtomicReq *req,
+                         ENUM_MESON_ASPECT_RATIO ASPECTRATIO, MESON_CONNECTOR_TYPE connType);
 
 int meson_open_drm();
 void meson_close_drm(int drmFd);

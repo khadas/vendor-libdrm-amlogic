@@ -1032,3 +1032,66 @@ int meson_drm_setPlaneMute(int drmFd, unsigned int plane_type, unsigned int plan
     return ret;
 }
 
+ENUM_MESON_ASPECT_RATIO meson_drm_getAspectRatioValue( int drmFd, MESON_CONNECTOR_TYPE connType )
+{
+    char propName[PROP_NAME_MAX_LEN] = {'\0'};
+    sprintf( propName, "%s", DRM_CONNECTOR_PROP_TX_ASPECT_RATIO);
+    ENUM_MESON_ASPECT_RATIO ASPECTRATIO = MESON_ASPECT_RATIO_AUTOMATIC;
+    uint32_t value = 0;
+    if ( drmFd < 0) {
+        ERROR("%s %d drmFd < 0",__FUNCTION__,__LINE__);
+        return ASPECTRATIO;
+    }
+    if ( 0 == meson_drm_get_conn_prop_value( drmFd, connType, propName, &value )) {
+        switch (value)
+        {
+            case 0:
+                ASPECTRATIO = MESON_ASPECT_RATIO_AUTOMATIC;
+                break;
+            case 1:
+                ASPECTRATIO = MESON_ASPECT_RATIO_4_3;
+                break;
+            case 2:
+                ASPECTRATIO = MESON_ASPECT_RATIO_16_9;
+                break;
+            default:
+                ASPECTRATIO = MESON_ASPECT_RATIO_RESERVED;
+                break;
+        }
+    } else {
+        ERROR(" %s %d get connector property value fail",__FUNCTION__,__LINE__);
+    }
+    DEBUG(" %s %d get aspect ratio value %d",__FUNCTION__,__LINE__, ASPECTRATIO);
+    return ASPECTRATIO;
+}
+
+int meson_drm_setAspectRatioValue(int drmFd, drmModeAtomicReq *req,
+                       ENUM_MESON_ASPECT_RATIO ASPECTRATIO, MESON_CONNECTOR_TYPE connType)
+{
+    int ret = -1;
+    int rc = -1;
+    struct mesonConnector* conn = NULL;
+    uint32_t connId = 0;
+    int value = meson_drm_getAspectRatioValue( drmFd, MESON_CONNECTOR_HDMIA );
+    if (value == 0) {
+        ERROR(" get current aspect ratio value：%d current mode do not support aspect ratio change", value);
+    }
+    conn = get_current_connector(drmFd, connType);
+    if ( drmFd < 0 || req == NULL) {
+        ERROR("%s %d invalid parameter return",__FUNCTION__,__LINE__);
+        return ret;
+    }
+    if (conn) {
+        DEBUG("%s %d get current connector success",__FUNCTION__,__LINE__);
+        connId = mesonConnectorGetId(conn);
+        rc = meson_drm_set_property(drmFd, req, connId, DRM_MODE_OBJECT_CONNECTOR,
+                       DRM_CONNECTOR_PROP_TX_ASPECT_RATIO, (uint32_t)ASPECTRATIO);
+        mesonConnectorDestroy(drmFd,conn);
+    }
+    if (rc >= 0)
+        ret = 0;
+    DEBUG("%s %d set aspect ratio value %d",__FUNCTION__,__LINE__,ASPECTRATIO);
+    return ret;
+}
+
+

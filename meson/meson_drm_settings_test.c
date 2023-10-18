@@ -31,7 +31,7 @@ int main(void )
         printf("get value: 1.HDCP version  2.HDMI connected 3.color space 4. color depth"
                "5. hdr mode 6. mode 7. hdr policy 8. EDID 9. hdcp auth status 10.supportedModesList"
                " 11.prefer mode 12.HDCP Content Type 13.Content Type 14.Dv Enable 15.active "
-               " 16.vrr Enable 17.AVMute 18.Hdrcap 19.DvCap 20.default modeInfo\n");
+               " 16.vrr Enable 17.AVMute 18.Hdrcap 19.DvCap 20.default modeInfo 21.current aspect ratio value\n");
         int get = 0;
         int drmFd = meson_open_drm();
         int len = scanf("%d", &get);
@@ -157,11 +157,22 @@ int main(void )
             if (meson_drm_getModeInfo(drmFd, MESON_CONNECTOR_RESERVED, &mode ) == 0) {
                 printf("\n mode (%d %d %d %d)\n",mode.w, mode.h, mode.vrefresh, mode.interlace);
             }
+        } else if (get == 21  && len == 1) {
+            int value = meson_drm_getAspectRatioValue( drmFd, MESON_CONNECTOR_HDMIA);
+            if (value == 0) {
+                printf("\n current mode do not support aspect ratio change\n"); //automatic
+            } else if (value == 1) {
+                printf("\n current aspect ratio is 4:3 and you can switch to 16:9\n");
+            } else if (value == 2) {
+                printf("\n current aspect ratio is 16:9 and you can switch to 4:3\n");
+            } else {
+                printf("\n invalid value\n");
+            }
         }
         meson_close_drm(drmFd);
     } else if (select_s_g == 0 && select_len == 1) {
         printf("set value:1.av mute 2.HDMI HDCP enable  3.HDCP Content Type "
-             " 4.DvEnable 5.active 6.vrr Enable 7.video zorder 8.plane mute\n");
+        " 4.DvEnable 5.active 6.vrr Enable 7.video zorder 8.plane mute 9.aspect ratio\n");
         int set = 0;
         int ret = -1;
         drmModeAtomicReq * req;
@@ -261,6 +272,24 @@ int main(void )
                     printf("\n meson_drm_setPlaneMute fail:\n");
             } else {
                     printf("\n \ scanf fail \n");
+            }
+        } else if (set == 9) {
+            printf("\n aspect ratio:\n");
+            int ASPECTRATIO =-1;
+            scanf("%d",&ASPECTRATIO);
+            int value = meson_drm_getAspectRatioValue( drmFd, MESON_CONNECTOR_HDMIA );
+            if (value == 0) {
+                printf("\n current mode do not support aspect ratio change\n");
+            } else {
+                if (ASPECTRATIO == 1 && value == 2) {
+                    if (0 == meson_drm_setAspectRatioValue(drmFd, req, ASPECTRATIO, MESON_CONNECTOR_HDMIA))
+                        printf("\n aspect ratio 4:3 set success\n");
+                } else if (ASPECTRATIO == 2 && value == 1) {
+                    if (0 == meson_drm_setAspectRatioValue(drmFd, req, ASPECTRATIO, MESON_CONNECTOR_HDMIA))
+                        printf("\n aspect ratio 16:9 set success\n");
+                } else {
+                    printf("\n aspect ratio invalid\n");
+                }
             }
         }
         ret = drmModeAtomicCommit(drmFd, req, DRM_MODE_ATOMIC_ALLOW_MODESET, NULL);
