@@ -43,6 +43,11 @@ struct drm_meson_video_zpos_target {
 	__u32 flag;
 };
 
+struct drm_meson_plane_mute {
+	int plane_type; /* 0:osd plane, 1:video plane */
+	int plane_mute; /* 0:umute plane, 1:mute plane */
+};
+
 /*Memory related.*/
 #define DRM_IOCTL_MESON_GEM_CREATE		DRM_IOWR(DRM_COMMAND_BASE + \
 		0x00, struct drm_meson_gem_create)
@@ -55,5 +60,7 @@ struct drm_meson_video_zpos_target {
 
 #define DRM_IOCTL_MESON_SET_VIDEO_ZPOS		DRM_IOWR(DRM_COMMAND_BASE + \
 		0x11, struct drm_meson_video_zpos_target)
+#define DRM_IOCTL_MESON_MUTE_PLANE	DRM_IOWR(DRM_COMMAND_BASE + \
+		0x12, struct drm_meson_plane_mute)
 
 #endif /* _MESON_DRM_H */

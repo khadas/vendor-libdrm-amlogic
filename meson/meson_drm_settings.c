@@ -1013,3 +1013,22 @@ int meson_drm_setVideoZorder(int drmFd, unsigned int index, unsigned int zorder,
     }
     return ret;
 }
+
+int meson_drm_setPlaneMute(int drmFd, unsigned int plane_type, unsigned int plane_mute)
+{
+    int ret = -1;
+    struct drm_meson_plane_mute plane_info;
+    if (drmFd < 0) {
+        ERROR("%s  %d drmFd < 0",__FUNCTION__,__LINE__);
+        return ret;
+    }
+
+    plane_info.plane_type = plane_type;
+    plane_info.plane_mute = plane_mute;
+    ret = drmIoctl(drmFd, DRM_IOCTL_MESON_MUTE_PLANE, &plane_info);
+    if (ret)
+        ERROR("\n failed to mute plane[%s].\n",strerror(errno));
+
+    return ret;
+}
+

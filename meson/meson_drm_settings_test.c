@@ -161,7 +161,7 @@ int main(void )
         meson_close_drm(drmFd);
     } else if (select_s_g == 0 && select_len == 1) {
         printf("set value:1.av mute 2.HDMI HDCP enable  3.HDCP Content Type "
-             " 4.DvEnable 5.active 6.vrr Enable 7.video zorder \n");
+             " 4.DvEnable 5.active 6.vrr Enable 7.video zorder 8.plane mute\n");
         int set = 0;
         int ret = -1;
         drmModeAtomicReq * req;
@@ -250,6 +250,18 @@ int main(void )
                 } else {
                     printf("\n \ scanf fail \n");
                 }
+        } else if (set == 8 && len == 1) {
+            printf("\n please enter the parameters in order(plane_type plane_mute): \n");
+            int plane_type = 0;
+            int plane_mute = 0;
+            len = scanf("%d %d",&plane_type,&plane_mute);
+            if (len == 2) {
+                int ret = meson_drm_setPlaneMute(drmFd, plane_type, plane_mute);
+                if (ret)
+                    printf("\n meson_drm_setPlaneMute fail:\n");
+            } else {
+                    printf("\n \ scanf fail \n");
+            }
         }
         ret = drmModeAtomicCommit(drmFd, req, DRM_MODE_ATOMIC_ALLOW_MODESET, NULL);
         if (ret) {

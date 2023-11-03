@@ -159,6 +159,7 @@ int meson_drm_getHdcpVer( int drmFd, MESON_CONNECTOR_TYPE connType );
 int meson_drm_getHdrCap( int drmFd, MESON_CONNECTOR_TYPE connType );
 int meson_drm_getDvCap( int drmFd, MESON_CONNECTOR_TYPE connType );
 int meson_drm_setVideoZorder(int drmFd, unsigned int index, unsigned int zorder, unsigned int flag);
+int meson_drm_setPlaneMute(int drmFd, unsigned int plane_type, unsigned int plane_mute);
 
 int meson_open_drm();
 void meson_close_drm(int drmFd);
