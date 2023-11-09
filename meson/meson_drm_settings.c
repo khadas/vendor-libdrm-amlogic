@@ -701,7 +701,7 @@ int meson_drm_getAVMute( int drmFd, MESON_CONNECTOR_TYPE connType )
     if ( 0 != meson_drm_get_conn_prop_value( drmFd, connType, propName, &value )) {
          ERROR("%s %d get connector property value fail",__FUNCTION__,__LINE__);
     }
-    DEBUG("%s %d get AVMute: %d (AVMute control, 1 means set avmute, 0 means not set avmute)",value,__FUNCTION__,__LINE__);
+    DEBUG("%s %d get avmute: %d (avmute control, 1 means set avmute, 0 means not set avmute)",__FUNCTION__,__LINE__,value);
     return value;
 }
 
