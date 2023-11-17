@@ -95,6 +95,8 @@ static void* uevent_monitor_thread(void *arg)
             fd_set fds;
             struct timeval tv;
             int ret;
+            bool isHPD;
+            bool isConnectorEvent;
             if ((fd = udev_monitor_get_fd(mon)) < 0) {
                 ERROR("ERROR[%s:%d] udev_monitor_get_fd failed", __FUNCTION__, __LINE__);
             } else {
@@ -105,6 +107,8 @@ static void* uevent_monitor_thread(void *arg)
                         ERROR("ERROR[%s:%d] udev_monitor_enable_receiving", __FUNCTION__, __LINE__);
                     } else {
                         while (isMonitoringAlive) {
+                            isHPD = false;
+                            isConnectorEvent = false;
                             FD_ZERO(&fds);
                             FD_SET(fd, &fds);
                             tv.tv_sec = 5; /* FIXME: fine tune the select timeout. */
@@ -117,14 +121,26 @@ static void* uevent_monitor_thread(void *arg)
                                         DEBUG("%s %d I: ACTION=%s",__FUNCTION__, __LINE__, udev_device_get_action(dev));
                                         DEBUG("%s %d I: DEVNAME=%s",__FUNCTION__, __LINE__, udev_device_get_sysname(dev));
                                         DEBUG("%s %d I: DEVPATH=%s",__FUNCTION__, __LINE__, udev_device_get_devpath(dev));
-                                        enConnection = meson_drm_getConnection();
-                                        if ( enPreConnection != enConnection) {
-                                            enPreConnection = enConnection;
-                                            DEBUG("%s %d Send %s HDMI Hot Plug Event !!!",__FUNCTION__, __LINE__,
-                                                    (enConnection ? "Connect":"DisConnect"));
-                                            enDisplayEvent = enConnection ? DISPLAY_EVENT_CONNECTED:DISPLAY_EVENT_DISCONNECTED;
-                                            if (_DisplayEventCb) {
-                                                _DisplayEventCb( enDisplayEvent, NULL);
+                                        struct udev_list_entry *list_entry;
+                                        udev_list_entry_foreach(list_entry, udev_device_get_properties_list_entry(dev)) {
+                                            ERROR("%s=%s\n",
+                                                   udev_list_entry_get_name(list_entry),
+                                                   udev_list_entry_get_value(list_entry));
+                                            if (!strcmp(udev_list_entry_get_name(list_entry), "HOTPLUG"))
+                                                isHPD = true;
+                                            if (!strcmp(udev_list_entry_get_name(list_entry), "CONNECTOR"))
+                                                isConnectorEvent = true;
+                                        }
+                                        if (isHPD && !isConnectorEvent) {
+                                            enConnection = meson_drm_getConnection();
+                                            if ( enPreConnection != enConnection) {
+                                                enPreConnection = enConnection;
+                                                ERROR("%s %d Send %s HDMI Hot Plug Event !!!",__FUNCTION__, __LINE__,
+                                                        (enConnection ? "Connect":"DisConnect"));
+                                                enDisplayEvent = enConnection ? DISPLAY_EVENT_CONNECTED:DISPLAY_EVENT_DISCONNECTED;
+                                                if (_DisplayEventCb) {
+                                                    _DisplayEventCb( enDisplayEvent, NULL);
+                                                }
                                             }
                                         }
                                         if ( !get_hdcp_status(&enCurStatus) )
@@ -132,10 +148,10 @@ static void* uevent_monitor_thread(void *arg)
                                         if ( enCurStatus != enPreStatus ) {
                                             enPreStatus = enCurStatus;
                                             enDisplayEvent = enCurStatus ? DISPLAY_HDCP_AUTHENTICATIONFAILURE:DISPLAY_HDCP_AUTHENTICATED;
-                                            DEBUG("%s %d Send %s !!!\n",__FUNCTION__, __LINE__, (enCurStatus ? "DISPLAY_HDCP_AUTHENTICATIONFAILURE":"DISPLAY_HDCP_AUTHENTICATED"));
+                                                ERROR("%s %d Send %s !!!\n",__FUNCTION__, __LINE__, (enCurStatus ? "DISPLAY_HDCP_AUTHENTICATIONFAILURE":"DISPLAY_HDCP_AUTHENTICATED"));
                                             if (_DisplayEventCb) {
                                                 _DisplayEventCb( enDisplayEvent, NULL);
-                                            }
+                                                }
                                         }
                                     }
                                     /* free dev */
