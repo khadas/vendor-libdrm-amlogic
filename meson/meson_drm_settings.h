@@ -19,6 +19,19 @@ extern "C" {
 #endif
 #define DRM_DISPLAY_MODE_LEN 32
 
+typedef enum _ENUM_MESON_DRM_PROP_NAME {
+   ENUM_MESON_DRM_PROP_CONTENT_PROTECTION = 0,
+   ENUM_MESON_DRM_PROP_HDR_POLICY,
+   ENUM_MESON_DRM_PROP_HDMI_ENABLE,
+   ENUM_MESON_DRM_PROP_COLOR_SPACE,
+   ENUM_MESON_DRM_PROP_COLOR_DEPTH,
+   ENUM_MESON_DRM_PROP_HDCP_VERSION,
+   ENUM_MESON_DRM_PROP_DOLBY_VISION_ENABLE,
+   ENUM_MESON_DRM_PROP_ACTIVE,
+   ENUM_MESON_DRM_PROP_VRR_ENABLED,
+   ENUM_MESON_DRM_PROP_ASPECT_RATIO
+} ENUM_MESON_DRM_PROP_NAME;
+
 struct video_zpos {
     unsigned int index;//<--Representing video index  Index 0 corresponds to modifying video 0;Index 1 corresponds to modifying video 1-->//
     unsigned int zpos; //<--Represents the zorder value set-->//
@@ -152,7 +165,7 @@ int meson_drm_getAVMute( int drmFd, MESON_CONNECTOR_TYPE connType );
 
 ENUM_MESON_HDCPAUTH_STATUS meson_drm_getHdcpAuthStatus( int drmFd, MESON_CONNECTOR_TYPE connType );
 int meson_drm_setHDCPEnable(int drmFd, drmModeAtomicReq *req,
-                       bool enable, MESON_CONNECTOR_TYPE connType);
+                       int enable, MESON_CONNECTOR_TYPE connType);
 
 int meson_drm_getsupportedModesList(int drmFd, DisplayMode** modeInfo, int* modeCount ,MESON_CONNECTOR_TYPE connType);
 int meson_drm_getPreferredMode( DisplayMode* mode, MESON_CONNECTOR_TYPE connType);
@@ -171,6 +184,10 @@ int meson_drm_setPlaneMute(int drmFd, unsigned int plane_type, unsigned int plan
 ENUM_MESON_ASPECT_RATIO meson_drm_getAspectRatioValue( int drmFd, MESON_CONNECTOR_TYPE connType );
 int meson_drm_setAspectRatioValue(int drmFd, drmModeAtomicReq *req,
                          ENUM_MESON_ASPECT_RATIO ASPECTRATIO, MESON_CONNECTOR_TYPE connType);
+
+int meson_drm_GetCrtcId(MESON_CONNECTOR_TYPE connType);
+int meson_drm_GetConnectorId(MESON_CONNECTOR_TYPE connType);
+char* meson_drm_GetPropName( ENUM_MESON_DRM_PROP_NAME enProp);
 
 int meson_open_drm();
 void meson_close_drm(int drmFd);

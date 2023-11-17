@@ -724,7 +724,7 @@ ENUM_MESON_HDCPAUTH_STATUS meson_drm_getHdcpAuthStatus( int drmFd, MESON_CONNECT
 }
 
 int meson_drm_setHDCPEnable(int drmFd, drmModeAtomicReq *req,
-                       bool enable, MESON_CONNECTOR_TYPE connType)
+                       int enable, MESON_CONNECTOR_TYPE connType)
 {
     int ret = -1;
     int rc = -1;
@@ -1094,4 +1094,108 @@ int meson_drm_setAspectRatioValue(int drmFd, drmModeAtomicReq *req,
     return ret;
 }
 
+int meson_drm_GetCrtcId(MESON_CONNECTOR_TYPE connType) {
+    int drmFd = -1;
+    int crtcId = -1;
+    struct mesonConnector* conn = NULL;
+    drmFd = meson_open_drm();
+    conn = get_current_connector(drmFd, connType);
+    if ( conn == NULL || drmFd < 0) {
+        ERROR("%s %d invalid parameter return",__FUNCTION__,__LINE__);
+        goto out;
+    }
+    crtcId = mesonConnectorGetCRTCId(conn);
+out:
+    if (conn) {
+        mesonConnectorDestroy(drmFd,conn);
+    }
+    meson_close_drm(drmFd);
+    return crtcId;
+}
+
+int meson_drm_GetConnectorId(MESON_CONNECTOR_TYPE connType) {
+    int drmFd = -1;
+    int connId = -1;
+    struct mesonConnector* conn = NULL;
+    drmFd = meson_open_drm();
+    conn = get_current_connector(drmFd, connType);
+    if ( conn == NULL || drmFd < 0) {
+        ERROR("%s %d invalid parameter return",__FUNCTION__,__LINE__);
+        goto out;
+    }
+    connId =  mesonConnectorGetId(conn);
+out:
+    if (conn) {
+        mesonConnectorDestroy(drmFd,conn);
+    }
+    meson_close_drm(drmFd);
+    return connId;
+}
+
+char* meson_drm_GetPropName( ENUM_MESON_DRM_PROP_NAME enProp) {
+    char* propName = NULL;
+    propName = (char*)malloc(sizeof(char)*50);
+    if (propName == NULL) {
+        ERROR("%s %d malloc fail",__FUNCTION__,__LINE__);
+        return propName;
+    } else {
+        switch (enProp)
+        {
+            case ENUM_MESON_DRM_PROP_CONTENT_PROTECTION:
+            {
+                strcpy( propName, DRM_CONNECTOR_PROP_CONTENT_PROTECTION);
+                break;
+            }
+            case ENUM_MESON_DRM_PROP_HDR_POLICY:
+            {
+                strcpy(propName,DRM_CONNECTOR_PROP_TX_HDR_POLICY);
+                break;
+            }
+            case ENUM_MESON_DRM_PROP_HDMI_ENABLE:
+            {
+               strcpy(propName,MESON_DRM_HDMITX_PROP_AVMUTE);
+               break;
+            }
+            case ENUM_MESON_DRM_PROP_COLOR_SPACE:
+            {
+               strcpy(propName,DRM_CONNECTOR_PROP_COLOR_SPACE);
+               break;
+            }
+            case ENUM_MESON_DRM_PROP_COLOR_DEPTH:
+            {
+                strcpy(propName,DRM_CONNECTOR_PROP_COLOR_DEPTH);
+                break;
+            }
+            case ENUM_MESON_DRM_PROP_HDCP_VERSION:
+            {
+                strcpy(propName,DRM_CONNECTOR_PROP_CONTENT_TYPE);
+                break;
+            }
+            case ENUM_MESON_DRM_PROP_DOLBY_VISION_ENABLE:
+            {
+                strcpy(propName,DRM_CONNECTOR_PROP_DV_ENABLE);
+                break;
+            }
+            case ENUM_MESON_DRM_PROP_ACTIVE:
+            {
+                strcpy(propName,DRM_CONNECTOR_PROP_ACTIVE);
+                break;
+            }
+            case ENUM_MESON_DRM_PROP_VRR_ENABLED:
+            {
+                strcpy(propName,DRM_CONNECTOR_VRR_ENABLED);
+                break;
+            }
+            case ENUM_MESON_DRM_PROP_ASPECT_RATIO:
+            {
+                strcpy(propName,DRM_CONNECTOR_PROP_TX_ASPECT_RATIO);
+                break;
+            }
+            default:
+                break;
+        }
+    }
+    DEBUG("%s %d meson_drm_getprop_name：%s",__FUNCTION__,__LINE__, propName);
+    return propName;
+}
 
