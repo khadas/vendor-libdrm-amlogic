@@ -91,7 +91,7 @@ int meson_drm_getEDID( int * data_Len, char **data);
 ENUM_MESON_DRM_CONNECTION meson_drm_getConnection();
 int meson_drm_set_prop( ENUM_MESON_DRM_PROP enProp, int prop_value );
 int meson_drm_get_prop( ENUM_MESON_DRM_PROP enProp, uint32_t* prop_value );
-int meson_drm_get_vblank_time(int drmFd, int nextVsync,uint64_t *vblankTime, uint64_t *refreshInterval);
+int meson_drm_get_vblank_time(int drmFd, int nextVsync,uint64_t *vblankTime, uint64_t *refreshInterval, int crtc_pipe);
 void meson_drm_close_fd(int drmFd);
 int meson_drm_open();
 

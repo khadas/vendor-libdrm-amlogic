@@ -643,33 +643,63 @@ static int  _get_frac_rate_policy()
     return ret;
 }
 
-int meson_drm_get_vblank_time(int drmFd, int nextVsync,uint64_t *vblankTime, uint64_t *refreshInterval)
+static int get_mode_by_crtc_pipe (int drmFd, int pipe, drmModeModeInfo* mode)
+{
+    int ret = -1;
+    int crtcId = -1;
+    drmModeCrtc *crtc = NULL;
+
+    if (drmFd < 0 || !mode) {
+        ERROR("%s %d drmFd < 0 || !mode",__FUNCTION__,__LINE__);
+        return ret;
+    }
+    drmModeRes *res= drmModeGetResources( drmFd );
+    if (pipe >= res->count_crtcs) {
+        ERROR("\n %s %d pipe:%d res->count_crtc:%d\n",__FUNCTION__,__LINE__,pipe, res->count_crtcs);
+        goto out;
+    }
+    crtcId = res->crtcs[pipe];
+    if (crtcId < 0)
+        goto out;
+    crtc = drmModeGetCrtc(drmFd, crtcId);
+    if (!crtc || !crtc->mode_valid) {
+        goto out;
+    }
+    memcpy(mode, &crtc->mode, sizeof(drmModeModeInfo) );
+    ret = 0;
+out:
+    if (crtc)
+        drmModeFreeCrtc(crtc);
+    if (res)
+        drmModeFreeResources(res);
+    return ret;
+}
+int meson_drm_get_vblank_time(int drmFd, int nextVsync,uint64_t *vblankTime, uint64_t *refreshInterval, int crtc_pipe)
 {
     int ret = -1;
     int rc = -1;
-    struct mesonConnector* connector = NULL;
-    drmModeModeInfo* mode = NULL;
+    drmModeModeInfo mode;
     if (drmFd < 0) {
         ERROR("%s %d drmFd < 0",__FUNCTION__,__LINE__);
         goto out;
     }
     if (nextVsync < 0)
         nextVsync = 0;
-    connector = get_current_connector(drmFd);
-    if (connector != NULL ) {
-       mode = mesonConnectorGetCurMode(drmFd, connector);
-       if (mode) {
-           *refreshInterval = (1000000LL+(mode->vrefresh/2)) / mode->vrefresh;
-           if ( ( mode->vrefresh == 60 || mode->vrefresh == 30 || mode->vrefresh == 24
-                  || mode->vrefresh == 120 || mode->vrefresh == 240 )
-               && _get_frac_rate_policy() == 1 ) {
-              *refreshInterval = (1000000LL+(mode->vrefresh/2)) * 1001 / mode->vrefresh / 1000;
-           }
-           free(mode);
-       }
+    memset(&mode, 0, sizeof(drmModeModeInfo));
+    if ( get_mode_by_crtc_pipe(drmFd, crtc_pipe, &mode) == 0 ) {
+        *refreshInterval = (1000000LL+(mode.vrefresh/2)) / mode.vrefresh;
+        if ( ( mode.vrefresh == 60 || mode.vrefresh == 30 || mode.vrefresh == 24
+               || mode.vrefresh == 120 || mode.vrefresh == 240 )
+            && _get_frac_rate_policy() == 1 ) {
+           *refreshInterval = (1000000LL+(mode.vrefresh/2)) * 1001 / mode.vrefresh / 1000;
+        }
+    } else {
+        INFO("%s %d get mode fail",__FUNCTION__,__LINE__);
     }
     drmVBlank vbl;
     vbl.request.type= DRM_VBLANK_RELATIVE;
+    if (crtc_pipe == 1)
+        vbl.request.type |= DRM_VBLANK_SECONDARY;
     vbl.request.sequence= nextVsync;
     vbl.request.signal= 0;
     rc = drmWaitVBlank(drmFd, &vbl );
@@ -683,7 +713,6 @@ int meson_drm_get_vblank_time(int drmFd, int nextVsync,uint64_t *vblankTime, uin
     }
     ret = 0;
 out:
-    mesonConnectorDestroy(drmFd, connector);
     return ret;
 }
 

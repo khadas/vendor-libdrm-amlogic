@@ -171,9 +171,12 @@ int main(void )
             uint64_t refreshInterval = 0;
             int fd = meson_drm_open();
             int nextVsync = 0;
+            int crtc = 0;
             printf("\n please input nextvsync value:\n");
             scanf("%d", &nextVsync);
-            if (0 == meson_drm_get_vblank_time(fd, nextVsync, &vlankTime, &refreshInterval))
+            printf("\n please input crtc index:\n");
+            scanf("%d", &crtc);
+            if (0 == meson_drm_get_vblank_time(fd, nextVsync, &vlankTime, &refreshInterval,crtc ))
                 printf("\n meson_drm_get_prop vlankTime:%llu, refreshInterval:%llu\n",vlankTime, refreshInterval);
             else
                 printf("\n meson_get_vblank_time fail\n");
