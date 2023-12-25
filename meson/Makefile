@@ -39,9 +39,12 @@ meson_drm_display_test_SRCS  = \
 meson_drm_settings_test_SRCS  = \
 	$(LOCAL_PATH)/meson_drm_settings_test.c \
 	$(NULL)
+
+OUT_DIR ?= .
 # ---------------------------------------------------------------------
 #  Build rules
 BUILD_TARGETS = libdrm_meson.so meson_drm_test  meson_drm_display_test  meson_drm_settings_test
+CLEAN_TARGETS = $(addprefix $(OUT_DIR)/, $(BUILD_TARGETS))
 
 .PHONY: all install uninstall clean
 
@@ -49,28 +52,28 @@ all:$(BUILD_TARGETS)
 
 libdrm_meson.so: $(meson_drm_SRCS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -g -D_FILE_OFFSET_BITS=64 -Wall  \
-	-shared -fPIC -o $@ $^ $(LDLIBS)
-	cp -f libdrm_meson.so  $(STAGING_DIR)/usr/lib/
+	-shared -fPIC -o $(OUT_DIR)/$@ $^ $(LDLIBS)
+	cp -f $(OUT_DIR)/libdrm_meson.so  $(STAGING_DIR)/usr/lib/
 
-meson_drm_test: $(meson_drm_test_SRCS) libdrm_meson.so
+meson_drm_test: $(meson_drm_test_SRCS) $(OUT_DIR)/libdrm_meson.so
 	$(CC) $(CFLAGS)  -I$(meson_drm_HEADERS) -L$(LOCAL_PATH) \
-	-ldrm_meson $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	-ldrm_meson $(LDFLAGS) -o $(OUT_DIR)/$@ $^ $(LDLIBS)
 
-meson_drm_display_test: $(meson_drm_display_test_SRCS) libdrm_meson.so
+meson_drm_display_test: $(meson_drm_display_test_SRCS) $(OUT_DIR)/libdrm_meson.so
 	$(CC) $(CFLAGS)  -I$(meson_drm_HEADERS) -L$(LOCAL_PATH) \
-	-ldrm_meson $(LDFLAGS) -o $@ $^ $(LDLIBS)
-meson_drm_settings_test: $(meson_drm_settings_test_SRCS) libdrm_meson.so
+	-ldrm_meson $(LDFLAGS) -o $(OUT_DIR)/$@ $^ $(LDLIBS)
+meson_drm_settings_test: $(meson_drm_settings_test_SRCS) $(OUT_DIR)/libdrm_meson.so
 	$(CC) $(CFLAGS)  -I$(meson_drm_HEADERS) -L$(LOCAL_PATH) \
-	-ldrm_meson $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	-ldrm_meson $(LDFLAGS) -o $(OUT_DIR)/$@ $^ $(LDLIBS)
 
 clean:
-	rm -f *.o $(BUILD_TARGETS)
+	rm -f *.o $(CLEAN_TARGETS)
 
 install:
-	install -m 0644 libdrm_meson.so $(TARGET_DIR)/usr/lib
-	install -m 755 meson_drm_test $(TARGET_DIR)/usr/bin/
-	install -m 755 meson_drm_display_test $(TARGET_DIR)/usr/bin/
-	install -m 755 meson_drm_settings_test $(TARGET_DIR)/usr/bin/
+	install -m 0644 $(OUT_DIR)/libdrm_meson.so $(TARGET_DIR)/usr/lib
+	install -m 755 $(OUT_DIR)/meson_drm_test $(TARGET_DIR)/usr/bin/
+	install -m 755 $(OUT_DIR)/meson_drm_display_test $(TARGET_DIR)/usr/bin/
+	install -m 755 $(OUT_DIR)/meson_drm_settings_test $(TARGET_DIR)/usr/bin/
 	cp meson_drmif.h $(STAGING_DIR)/usr/include/
 	cp meson_drm_util.h $(STAGING_DIR)/usr/include/
 	install -D -m 0644 meson_drm_settings.h $(STAGING_DIR)/usr/include/libdrm_meson/meson_drm_settings.h

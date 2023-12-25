@@ -16,6 +16,8 @@ LDFLAGS += -L$(STAGING_DIR)/usr/lib -ldrm
 drm_setcrtc_SRCS  = \
 	$(LOCAL_PATH)/drm_setcrtc.c  \
 	$(NULL)
+
+OUT_DIR ?= .
 # ---------------------------------------------------------------------
 #  Build rules
 BUILD_TARGETS = drm_setcrtc
@@ -23,15 +25,15 @@ BUILD_TARGETS = drm_setcrtc
 .PHONY: all install uninstall clean
 
 drm_setcrtc: $(drm_setcrtc_SRCS)
-	$(CC) $(CFLAGS) -L$(LOCAL_PATH) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	$(CC) $(CFLAGS) -L$(LOCAL_PATH) $(LDFLAGS) -o $(OUT_DIR)/$@ $^ $(LDLIBS)
 
 all: $(BUILD_TARGETS)
 
 clean:
-	rm -f *.o $(BUILD_TARGETS)
+	rm -f *.o $(OUT_DIR)/$(BUILD_TARGETS)
 
 install:
-	install -m 755 drm_setcrtc $(TARGET_DIR)/usr/bin/
+	install -m 755 $(OUT_DIR)/drm_setcrtc $(TARGET_DIR)/usr/bin/
 
 uninstall:
 	rm -f $(TARGET_DIR)/usr/bin/drm_setcrtc
