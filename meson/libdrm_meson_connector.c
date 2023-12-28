@@ -31,6 +31,8 @@ char* edid_data;
 int connection;
 int crtc_id;
 int encoder_id;
+uint32_t mm_width;
+uint32_t mm_height;
 };
 static int meson_amsysfs_set_sysfs_strs(const char *path, const char *val)
 {
@@ -44,6 +46,80 @@ static int meson_amsysfs_set_sysfs_strs(const char *path, const char *val)
 	}
 	return -1;
 }
+
+struct mesonPrimaryPlane {
+int fb_width;
+int fb_height;
+};
+
+struct mesonPrimaryPlane* mesonPrimaryPlaneCreate(int drmFd) {
+	drmModePlane *plane= 0;
+	drmModeObjectProperties *props= 0;
+	drmModePropertyRes *prop= 0;
+	drmModeFB *fb = 0;
+	drmModePlaneRes *planeRes= 0;
+	struct mesonPrimaryPlane* ret = NULL;
+	planeRes = drmModeGetPlaneResources(drmFd);
+	ret = (struct mesonPrimaryPlane*)calloc( 1,sizeof(struct mesonPrimaryPlane) );
+	if ( !ret ) {
+		ERROR("%s %d mesonPrimaryPlane create fail",__FUNCTION__,__LINE__);
+		goto out;
+	}
+	if ( !planeRes ) {
+		ERROR("%s %d failed to get plane resources from drmFd (%d)", __FUNCTION__,__LINE__,drmFd);
+		free(ret);
+		ret = NULL;
+		goto out;
+	}
+	for ( uint32_t n = 0; n < planeRes->count_planes; ++n ) {
+		plane = drmModeGetPlane(drmFd, planeRes->planes[n]);
+		if ( !plane ) {
+			ERROR("%s %d drmModeGetPlane failed", __FUNCTION__,__LINE__);
+			free(ret);
+			ret = NULL;
+			goto out;
+		}
+		props = drmModeObjectGetProperties( drmFd, planeRes->planes[n], DRM_MODE_OBJECT_PLANE );
+		if ( !props ) {
+			ERROR("%s %d drmModeObjectGetProperties failed",__FUNCTION__,__LINE__);
+			free(ret);
+			ret = NULL;
+			goto out;
+		}
+		for ( uint32_t j = 0; j < props->count_props; ++j ) {
+			prop = drmModeGetProperty( drmFd, props->props[j] );
+			if ( !prop ) {
+				free(ret);
+				ret = NULL;
+				goto out;
+			}
+			if (!strcmp(prop->name, "type")) {
+				if (props->prop_values[j] == DRM_PLANE_TYPE_PRIMARY) {
+					/* get fb */
+					fb = drmModeGetFB(drmFd, plane->fb_id);
+					if (fb) {
+					/* Get the width and height */
+						ret->fb_width = fb->width;
+						ret->fb_height = fb->height;
+						drmModeFreeFB(fb);
+					}
+				}
+			}
+			drmModeFreeProperty(prop);
+		}
+	}
+out:
+	if (props) {
+		drmModeFreeObjectProperties( props );
+	}
+	if (plane) {
+		drmModeFreePlane( plane );
+		plane = 0;
+	}
+	drmModeFreePlaneResources( planeRes );
+	return ret;
+}
+
 struct mesonConnector *mesonConnectorCreate(int drmFd, int type)
 {
 	drmModeRes *res= NULL;
@@ -94,6 +170,8 @@ struct mesonConnector *mesonConnectorCreate(int drmFd, int type)
 		ret->id = conn->connector_id;
 		ret->type = conn->connector_type;
 		ret->encoder_id = conn->encoder_id;
+		ret->mm_width = conn->mmWidth;
+		ret->mm_height = conn->mmHeight;
 		cur_encoder = drmModeGetEncoder(drmFd, ret->encoder_id);
 		if (cur_encoder)
 			ret->crtc_id = cur_encoder->crtc_id;
@@ -226,6 +304,15 @@ struct mesonConnector *mesonConnectorDestroy(int drmFd, struct mesonConnector *c
 	}
 	return connector;
 }
+
+void mesonPrimaryPlaneDestroy(int drmFd, struct mesonPrimaryPlane *primaryplane)
+{
+	if ( primaryplane ) {
+		free(primaryplane);
+		primaryplane = NULL;
+	}
+}
+
 int mesonConnectorGetId(struct mesonConnector* connector)
 {
 	if ( connector ) {
@@ -334,3 +421,32 @@ void dump_connector(struct mesonConnector* connector)
 		DEBUG("\n");
 	}
 }
+
+/*   Get fb the width and height Information */
+int mesonPrimaryPlaneGetFbSize(struct mesonPrimaryPlane* planesize, int* width, int* height) {
+	int ret = -1;
+	if (!planesize) {
+		ERROR("%s %d invalid parameters ",__FUNCTION__,__LINE__);
+	} else {
+		*width = planesize->fb_width;
+		*height = planesize->fb_height;
+		ret = 0;
+		DEBUG("%s %d GetGraphicPlaneSize %d x %d",__FUNCTION__,__LINE__,*width, *height);
+	}
+	return ret;
+}
+
+/*   Get physical size Information */
+int mesonConnectorGetPhysicalSize(struct mesonConnector * connector, int* width, int* height) {
+	int ret = -1;
+	if (!connector) {
+		ERROR("%s %d invalid parameters ",__FUNCTION__,__LINE__);
+	} else {
+		*width = connector->mm_width;
+		*height = connector->mm_height;
+		ret = 0;
+	}
+	return ret;
+}
+
+

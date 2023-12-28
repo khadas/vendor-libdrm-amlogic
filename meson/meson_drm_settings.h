@@ -19,6 +19,18 @@ extern "C" {
 #endif
 #define DRM_DISPLAY_MODE_LEN 32
 
+typedef enum _MESON_DRM_FORCE_MODE {
+    MESON_DRM_UNKNOWN_FMT     = 0,
+    MESON_DRM_BT709,
+    MESON_DRM_BT2020,
+    MESON_DRM_BT2020_PQ,
+    MESON_DRM_BT2020_PQ_DYNAMIC,
+    MESON_DRM_BT2020_HLG,
+    MESON_DRM_BT2100_IPT,
+    MESON_DRM_BT2020YUV_BT2020RGB_CUVA,
+    MESON_DRM_BT_BYPASS
+} ENUM_MESON_DRM_FORCE_MODE;
+
 typedef enum _ENUM_MESON_DRM_PROP_NAME {
    ENUM_MESON_DRM_PROP_CONTENT_PROTECTION = 0,
    ENUM_MESON_DRM_PROP_HDR_POLICY,
@@ -29,7 +41,9 @@ typedef enum _ENUM_MESON_DRM_PROP_NAME {
    ENUM_MESON_DRM_PROP_DOLBY_VISION_ENABLE,
    ENUM_MESON_DRM_PROP_ACTIVE,
    ENUM_MESON_DRM_PROP_VRR_ENABLED,
-   ENUM_MESON_DRM_PROP_ASPECT_RATIO
+   ENUM_MESON_DRM_PROP_ASPECT_RATIO,
+   ENUM_MESON_DRM_PROP_TX_HDR_OFF,
+   ENUM_MESON_DRM_PROP_DV_MODE
 } ENUM_MESON_DRM_PROP_NAME;
 
 struct video_zpos {
@@ -110,7 +124,8 @@ typedef enum _ENUM_MESON_HDCP_VERSION {
 
 typedef enum _ENUM_MESON_HDR_POLICY {
     MESON_HDR_POLICY_FOLLOW_SINK      = 0,
-    MESON_HDR_POLICY_FOLLOW_SOURCE
+    MESON_HDR_POLICY_FOLLOW_SOURCE,
+    MESON_HDR_POLICY_FOLLOW_FORCE_MODE
 } ENUM_MESON_HDR_POLICY;
 
 typedef enum _ENUM_MESON_HDCP_AUTH_STATUS {
@@ -176,18 +191,27 @@ ENUM_MESON_HDCP_Content_Type meson_drm_getHDCPContentType( int drmFd, MESON_CONN
 
 int meson_drm_getHdcpVer( int drmFd, MESON_CONNECTOR_TYPE connType );
 
-int meson_drm_getHdrCap( int drmFd, MESON_CONNECTOR_TYPE connType );
-int meson_drm_getDvCap( int drmFd, MESON_CONNECTOR_TYPE connType );
+uint32_t meson_drm_getHdrCap( int drmFd, MESON_CONNECTOR_TYPE connType );
+uint32_t meson_drm_getDvCap( int drmFd, MESON_CONNECTOR_TYPE connType );
 int meson_drm_setVideoZorder(int drmFd, unsigned int index, unsigned int zorder, unsigned int flag);
 int meson_drm_setPlaneMute(int drmFd, unsigned int plane_type, unsigned int plane_mute);
 
 ENUM_MESON_ASPECT_RATIO meson_drm_getAspectRatioValue( int drmFd, MESON_CONNECTOR_TYPE connType );
 int meson_drm_setAspectRatioValue(int drmFd, drmModeAtomicReq *req,
                          ENUM_MESON_ASPECT_RATIO ASPECTRATIO, MESON_CONNECTOR_TYPE connType);
-
 int meson_drm_GetCrtcId(MESON_CONNECTOR_TYPE connType);
 int meson_drm_GetConnectorId(MESON_CONNECTOR_TYPE connType);
 char* meson_drm_GetPropName( ENUM_MESON_DRM_PROP_NAME enProp);
+
+int meson_drm_setFracRatePolicy(int drmFd, drmModeAtomicReq *req, int FracRate,
+                                           MESON_CONNECTOR_TYPE connType);
+int meson_drm_getFracRatePolicy(int drmFd, MESON_CONNECTOR_TYPE connType);
+int meson_drm_getHdrForceMode(int drmFd, MESON_CONNECTOR_TYPE connType);
+int meson_drm_setHdrForceMode(int drmFd, drmModeAtomicReq *req,ENUM_MESON_DRM_FORCE_MODE forcemode,
+                                            MESON_CONNECTOR_TYPE connType);
+int meson_drm_setDvMode(int drmFd, drmModeAtomicReq *req, int dvMode, MESON_CONNECTOR_TYPE connType);
+int meson_drm_getGraphicPlaneSize(int drmFd, uint32_t* width, uint32_t* height);
+int meson_drm_getPhysicalSize(int drmFd, uint32_t* width, uint32_t* height, MESON_CONNECTOR_TYPE connType);
 
 int meson_open_drm();
 void meson_close_drm(int drmFd);

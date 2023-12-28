@@ -35,11 +35,21 @@ extern "C" {
 #define DRM_CONNECTOR_PROP_Content_Type       "content type"
 #define DRM_CONNECTOR_PROP_ACTIVE       "ACTIVE"
 #define DRM_CONNECTOR_VRR_ENABLED       "VRR_ENABLED"
+#define DRM_CONNECTOR_FRAC_RATE_POLICY      "FRAC_RATE_POLICY"
+#define DRM_CONNECTOR_PROP_TX_HDR_OFF      "force_output"
+#define DRM_CONNECTOR_DV_MODE       "dv_mode"
+#define DRM_CONNECTOR_PROP_DPMS       "DPMS"
 
+struct mesonPrimaryPlane;
 struct mesonConnector;
+struct mesonPrimaryPlane* mesonPrimaryPlaneCreate(int drmFd);
 struct mesonConnector *mesonConnectorCreate(int drmFd, int type);
 int mesonConnectorUpdate(int drmFd, struct mesonConnector *connector);
 struct mesonConnector *mesonConnectorDestroy(int drmFd, struct mesonConnector* connector);
+void mesonPrimaryPlaneDestroy(int drmFd, struct mesonPrimaryPlane *primaryplane);
+int mesonPrimaryPlaneGetFbSize(struct mesonPrimaryPlane* planesize, int* width, int* height);
+int mesonConnectorGetPhysicalSize(struct mesonConnector * connector, int* width, int* height);
+
 int mesonConnectorGetId(struct mesonConnector* connector);
 /*HDMI capabilities - Rx supported video formats*/
 int mesonConnectorGetModes(struct mesonConnector * connector,int drmFd, drmModeModeInfo** modes, int *count_modes);

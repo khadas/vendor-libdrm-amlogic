@@ -497,11 +497,11 @@ int meson_drm_setColorDepth(int drmFd, drmModeAtomicReq *req,
     int rc = -1;
     struct mesonConnector* conn = NULL;
     uint32_t connId = 0;
-    conn = get_current_connector(drmFd, connType);
     if ( drmFd < 0 || req == NULL) {
         ERROR("%s %d invalid parameter return",__FUNCTION__,__LINE__);
         return ret;
     }
+    conn = get_current_connector(drmFd, connType);
     if (conn) {
         DEBUG("%s %d get current connector success",__FUNCTION__,__LINE__);
         connId = mesonConnectorGetId(conn);
@@ -529,6 +529,8 @@ ENUM_MESON_HDR_POLICY meson_drm_getHDRPolicy( int drmFd, MESON_CONNECTOR_TYPE co
             hdrPolicy = MESON_HDR_POLICY_FOLLOW_SINK;
         if (value == 1)
             hdrPolicy = MESON_HDR_POLICY_FOLLOW_SOURCE;
+        if (value == 2)
+            hdrPolicy = MESON_HDR_POLICY_FOLLOW_FORCE_MODE;
     }
     DEBUG("%s %d get HDR Policy: %d",__FUNCTION__,__LINE__,hdrPolicy);
     return hdrPolicy;
@@ -541,11 +543,11 @@ int meson_drm_setHDRPolicy(int drmFd, drmModeAtomicReq *req,
     int rc = -1;
     struct mesonConnector* conn = NULL;
     uint32_t crtcId = 0;
-    conn = get_current_connector(drmFd, connType);
     if ( drmFd < 0 || req == NULL) {
         ERROR("%s %d invalid parameter return",__FUNCTION__,__LINE__);
         return ret;
     }
+    conn = get_current_connector(drmFd, connType);
     if (conn) {
         DEBUG("%s %d get current connector success",__FUNCTION__,__LINE__);
         crtcId = mesonConnectorGetCRTCId(conn);
@@ -849,11 +851,11 @@ int meson_drm_setDvEnable(int drmFd, drmModeAtomicReq *req,
     int rc = -1;
     struct mesonConnector* conn = NULL;
     uint32_t crtcId = 0;
-    conn = get_current_connector(drmFd, connType);
     if ( drmFd < 0 || req == NULL) {
         ERROR(" %s %d invalid parameter return",__FUNCTION__,__LINE__);
         return ret;
     }
+    conn = get_current_connector(drmFd, connType);
     if (conn) {
         DEBUG("%s %d get current connector success",__FUNCTION__,__LINE__);
         crtcId = mesonConnectorGetCRTCId(conn);
@@ -890,11 +892,11 @@ int meson_drm_setActive(int drmFd, drmModeAtomicReq *req,
     int rc = -1;
     struct mesonConnector* conn = NULL;
     uint32_t crtcId = 0;
-    conn = get_current_connector(drmFd, connType);
     if ( drmFd < 0 || req == NULL) {
         ERROR(" %s %d invalid parameter return",__FUNCTION__,__LINE__);
         return ret;
     }
+    conn = get_current_connector(drmFd, connType);
     if (conn) {
         DEBUG("%s %d get current connector success",__FUNCTION__,__LINE__);
         crtcId = mesonConnectorGetCRTCId(conn);
@@ -931,11 +933,11 @@ int meson_drm_setVrrEnabled(int drmFd, drmModeAtomicReq *req,
     int rc = -1;
     struct mesonConnector* conn = NULL;
     uint32_t crtcId = 0;
-    conn = get_current_connector(drmFd, connType);
     if ( drmFd < 0 || req == NULL) {
         ERROR("%s %d invalid parameter return",__FUNCTION__,__LINE__);
         return ret;
     }
+    conn = get_current_connector(drmFd, connType);
     if (conn) {
         DEBUG("%s %d get current connector success",__FUNCTION__,__LINE__);
         crtcId = mesonConnectorGetCRTCId(conn);
@@ -965,7 +967,7 @@ int meson_drm_getVrrEnabled( int drmFd, MESON_CONNECTOR_TYPE connType )
     return value;
 }
 
-int meson_drm_getHdrCap( int drmFd, MESON_CONNECTOR_TYPE connType )
+uint32_t meson_drm_getHdrCap( int drmFd, MESON_CONNECTOR_TYPE connType )
 {
     char propName[PROP_NAME_MAX_LEN] = {'\0'};
     sprintf( propName, "%s", DRM_CONNECTOR_PROP_RX_HDR_CAP);
@@ -977,11 +979,11 @@ int meson_drm_getHdrCap( int drmFd, MESON_CONNECTOR_TYPE connType )
     if ( 0 != meson_drm_get_conn_prop_value( drmFd, connType, propName, &value )) {
          ERROR("%s %d get connector property value fail",__FUNCTION__,__LINE__);
     }
-    DEBUG("%s %d get hdrcap: %d (presents the RX HDR capability [r])",__FUNCTION__,__LINE__,value);
+    DEBUG("%s %d get hdrcap prop value %d",__FUNCTION__,__LINE__,value);
     return value;
 }
 
-int meson_drm_getDvCap( int drmFd, MESON_CONNECTOR_TYPE connType )
+uint32_t meson_drm_getDvCap( int drmFd, MESON_CONNECTOR_TYPE connType )
 {
     char propName[PROP_NAME_MAX_LEN] = {'\0'};
     sprintf( propName, "%s", DRM_CONNECTOR_PROP_RX_DV_CAP);
@@ -1076,11 +1078,11 @@ int meson_drm_setAspectRatioValue(int drmFd, drmModeAtomicReq *req,
     if (value == 0) {
         ERROR(" get current aspect ratio value：%d current mode do not support aspect ratio change", value);
     }
-    conn = get_current_connector(drmFd, connType);
     if ( drmFd < 0 || req == NULL) {
         ERROR("%s %d invalid parameter return",__FUNCTION__,__LINE__);
         return ret;
     }
+    conn = get_current_connector(drmFd, connType);
     if (conn) {
         DEBUG("%s %d get current connector success",__FUNCTION__,__LINE__);
         connId = mesonConnectorGetId(conn);
@@ -1191,11 +1193,198 @@ char* meson_drm_GetPropName( ENUM_MESON_DRM_PROP_NAME enProp) {
                 strcpy(propName,DRM_CONNECTOR_PROP_TX_ASPECT_RATIO);
                 break;
             }
+            case ENUM_MESON_DRM_PROP_TX_HDR_OFF:
+            {
+                strcpy(propName, DRM_CONNECTOR_PROP_TX_HDR_OFF);
+                break;
+            }
+            case ENUM_MESON_DRM_PROP_DV_MODE:
+            {
+                strcpy(propName,DRM_CONNECTOR_DV_MODE);
+                break;
+            }
             default:
                 break;
         }
     }
     DEBUG("%s %d meson_drm_getprop_name：%s",__FUNCTION__,__LINE__, propName);
     return propName;
+}
+
+int meson_drm_setFracRatePolicy(int drmFd, drmModeAtomicReq *req,
+                       int FracRate, MESON_CONNECTOR_TYPE connType)
+{
+    int ret = -1;
+    int rc = -1;
+    struct mesonConnector* conn = NULL;
+    int connId = 0;
+    if ( drmFd < 0 || req == NULL) {
+        ERROR("%s %d invalid parameter return",__FUNCTION__,__LINE__);
+        return ret;
+    }
+    conn = get_current_connector(drmFd, connType);
+    if (conn) {
+        DEBUG("%s %d get current connector success",__FUNCTION__,__LINE__);
+        connId = mesonConnectorGetId(conn);
+        rc = meson_drm_set_property(drmFd, req, connId, DRM_MODE_OBJECT_CONNECTOR,
+                       DRM_CONNECTOR_FRAC_RATE_POLICY, (uint64_t)FracRate);
+        mesonConnectorDestroy(drmFd,conn);
+    }
+    if (rc >= 0)
+        ret = 0;
+    DEBUG(" %s %d set Frac_Rate %d",__FUNCTION__,__LINE__,FracRate);
+    return ret;
+}
+
+int meson_drm_getFracRatePolicy(int drmFd, MESON_CONNECTOR_TYPE connType)
+{
+    char propName[PROP_NAME_MAX_LEN] = {'\0'};
+    sprintf( propName, "%s", DRM_CONNECTOR_FRAC_RATE_POLICY);
+    int value = -1;
+    if ( drmFd < 0) {
+        ERROR("%s %d drmFd < 0",__FUNCTION__,__LINE__);
+        return value;
+    }
+    if ( 0 != meson_drm_get_conn_prop_value( drmFd, connType, propName, &value )) {
+         ERROR("%s %d get connector property value fail",__FUNCTION__,__LINE__);
+    }
+    DEBUG("%s %d get Frac_Rate %d",__FUNCTION__,__LINE__,value);
+    return value;
+}
+
+int meson_drm_getHdrForceMode( int drmFd, MESON_CONNECTOR_TYPE connType )
+{
+    char propName[PROP_NAME_MAX_LEN] = {'\0'};
+    sprintf( propName, "%s", DRM_CONNECTOR_PROP_TX_HDR_OFF);
+    uint32_t value = 0;
+    if ( drmFd < 0) {
+        ERROR("%s %d drmFd < 0",__FUNCTION__,__LINE__);
+        return value;
+    }
+    if ( 0 != meson_drm_get_crtc_prop_value( drmFd, connType, propName, &value )) {
+         ERROR("%s %d get crtc property value fail",__FUNCTION__,__LINE__);
+    }
+    DEBUG("%s %d get force mode %d",__FUNCTION__,__LINE__,value);
+    return value;
+}
+
+int meson_drm_setHdrForceMode(int drmFd, drmModeAtomicReq *req,ENUM_MESON_DRM_FORCE_MODE forcemode,
+                                            MESON_CONNECTOR_TYPE connType)
+{
+    int ret = -1;
+    int rc = -1;
+    struct mesonConnector* conn = NULL;
+    int crtcId = 0;
+    if ( drmFd < 0 || req == NULL) {
+        ERROR(" %s %d invalid parameter return",__FUNCTION__,__LINE__);
+        return ret;
+    }
+    conn = get_current_connector(drmFd, connType);
+    if (conn) {
+        DEBUG("%s %d get current connector success",__FUNCTION__,__LINE__);
+        crtcId = mesonConnectorGetCRTCId(conn);
+        rc = meson_drm_set_property(drmFd, req, crtcId, DRM_MODE_OBJECT_CRTC,
+                       DRM_CONNECTOR_PROP_TX_HDR_OFF, (uint64_t)forcemode);
+        mesonConnectorDestroy(drmFd,conn);
+    }
+    if (rc >= 0)
+        ret = 0;
+    DEBUG("%s %d set force mode %d ",__FUNCTION__,__LINE__,forcemode);
+    return ret;
+}
+
+int meson_drm_setDvMode(int drmFd, drmModeAtomicReq *req,
+                       int dvMode, MESON_CONNECTOR_TYPE connType)
+{
+    int ret = -1;
+    int rc = -1;
+    struct mesonConnector* conn = NULL;
+    int crtcId = 0;
+    if ( drmFd < 0 || req == NULL) {
+        ERROR(" %s %d invalid parameter return",__FUNCTION__,__LINE__);
+        return ret;
+    }
+    conn = get_current_connector(drmFd, connType);
+    if (conn) {
+        DEBUG("%s %d get current connector success",__FUNCTION__,__LINE__);
+        crtcId = mesonConnectorGetCRTCId(conn);
+        rc = meson_drm_set_property(drmFd, req, crtcId, DRM_MODE_OBJECT_CRTC,
+                       DRM_CONNECTOR_DV_MODE, (uint64_t)dvMode);
+        mesonConnectorDestroy(drmFd,conn);
+    }
+    if (rc >= 0)
+        ret = 0;
+    DEBUG("%s %d set dv mode value %d",__FUNCTION__,__LINE__,dvMode);
+    return ret;
+}
+
+int meson_drm_getDpmsStatus( int drmFd, MESON_CONNECTOR_TYPE connType )
+{
+    char propName[PROP_NAME_MAX_LEN] = {'\0'};
+    sprintf( propName, "%s", DRM_CONNECTOR_PROP_DPMS);
+    uint32_t value = 0;
+    if ( drmFd < 0) {
+        ERROR("%s %d drmFd < 0",__FUNCTION__,__LINE__);
+        return value;
+    }
+    if ( 0 != meson_drm_get_conn_prop_value( drmFd, connType, propName, &value )) {
+         ERROR("%s %d get connector property value fail",__FUNCTION__,__LINE__);
+    }
+    DEBUG("%s %d get dpms status %d",__FUNCTION__,__LINE__,value);
+    return value;
+}
+
+int meson_drm_getGraphicPlaneSize(int drmFd, uint32_t* width, uint32_t* height) {
+    int ret = -1;
+    struct mesonPrimaryPlane* planesize = NULL;
+    if (width == NULL || height == NULL) {
+        ERROR("%s %d Error: One or both pointers are NULL.\n",__FUNCTION__,__LINE__);
+        return ret;
+    }
+    if ( drmFd < 0) {
+        ERROR("%s %d drmFd < 0",__FUNCTION__,__LINE__);
+        return ret;
+    }
+    planesize = mesonPrimaryPlaneCreate(drmFd);
+    if (planesize == NULL) {
+        ERROR("%s %d connector create fail.return",__FUNCTION__,__LINE__);
+        return ret;
+    }
+    if (mesonPrimaryPlaneGetFbSize(planesize, width, height) != 0) {
+        goto out;
+    }
+    DEBUG("%s %d GetGraphicPlaneSize %d x %d",__FUNCTION__,__LINE__,*width, *height);
+    ret = 0;
+out:
+    if (planesize)
+        mesonPrimaryPlaneDestroy(drmFd,planesize);
+    return ret;
+}
+
+int meson_drm_getPhysicalSize(int drmFd, uint32_t* width, uint32_t* height, MESON_CONNECTOR_TYPE connType) {
+    int ret = -1;
+    struct mesonConnector* conn = NULL;
+    if (width == NULL || height == NULL) {
+        ERROR("%s %d Error: One or both pointers are NULL.\n",__FUNCTION__,__LINE__);
+        return ret;
+    }
+    if ( drmFd < 0) {
+        ERROR("%s %d drmFd < 0",__FUNCTION__,__LINE__);
+        return ret;
+    }
+    conn = get_current_connector(drmFd, connType);
+    if ( conn == NULL) {
+        ERROR("%s %d  connector create fail.return",__FUNCTION__,__LINE__);
+        return ret;
+    }
+    if (mesonConnectorGetPhysicalSize(conn, width, height) != 0) {
+        goto out;
+    }
+    DEBUG("%s %d GetPhysicalSize %d x %d",__FUNCTION__,__LINE__,*width, *height);
+    ret = 0;
+out:
+    if (conn)
+        mesonConnectorDestroy(drmFd,conn);
+    return ret;
 }
 
