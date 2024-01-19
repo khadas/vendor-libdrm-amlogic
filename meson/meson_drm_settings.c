@@ -1388,3 +1388,36 @@ out:
     return ret;
 }
 
+int meson_drm_getSignalTimingInfo(int drmFd, uint16_t* htotal, uint16_t* vtotal, uint16_t* hstart,
+                                      uint16_t* vstart, MESON_CONNECTOR_TYPE connType) {
+    int ret = -1;
+    struct mesonConnector* conn = NULL;
+    drmModeModeInfo* mode = NULL;
+    if (htotal == NULL || vtotal == NULL || hstart == NULL || vstart == NULL || drmFd < 0) {
+        ERROR(" %s %d invalid parameter return",__FUNCTION__,__LINE__);
+        return ret;
+    }
+    conn = get_current_connector(drmFd, connType);
+    if ( conn ) {
+        mode = mesonConnectorGetCurMode(drmFd, conn);
+        if (mode) {
+            *htotal = mode->htotal;
+            *vtotal = mode->vtotal;
+            *hstart = mode->htotal - mode->hsync_end;
+            *vstart = mode->vtotal - mode->vsync_end;
+            free(mode);
+            mode = NULL;
+            ret = 0;
+        } else {
+            ERROR(" %s %d mode get fail ",__FUNCTION__,__LINE__);
+        }
+    } else {
+        ERROR("%s %d conn create fail ",__FUNCTION__,__LINE__);
+    }
+    if (conn)
+        mesonConnectorDestroy(drmFd,conn);
+    DEBUG("%s %d htotal: %d vtotal: %d hstart: %d vstart: %d",__FUNCTION__,__LINE__,
+                              *htotal,*vtotal,*hstart,*vstart);
+    return ret;
+}
+

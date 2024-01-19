@@ -32,7 +32,8 @@ int main(void )
                "5. hdr mode 6. mode 7. hdr policy 8. EDID 9. hdcp auth status 10.supportedModesList"
                " 11.prefer mode 12.HDCP Content Type 13.Content Type 14.Dv Enable 15.active "
                " 16.vrr Enable 17.AVMute 18.Hdrcap 19.DvCap 20.default modeInfo 21.current aspect ratio value"
-               " 22.frac rate policy 23.hdr force mode 24.dpms status 25.plane size 26.physical size\n");
+               " 22.frac rate policy 23.hdr force mode 24.dpms status 25.plane size 26.physical size"
+               " 27.Timing information\n");
         int get = 0;
         int drmFd = meson_open_drm();
         int len = scanf("%d", &get);
@@ -209,6 +210,19 @@ int main(void )
                printf("\n get physical Size width = %d, height = %d\n", width, height);
            } else {
                printf("\n meson_drm_getPhysicalSize fail\n");
+           }
+        } else if (get == 27 && len == 1) {
+           uint16_t htotal = 0;
+           uint16_t vtotal = 0;
+           uint16_t hstart = 0;
+           uint16_t vstart = 0;
+           int ret = meson_drm_getSignalTimingInfo( drmFd, &htotal, &vtotal, &hstart,&vstart,
+                                          MESON_CONNECTOR_HDMIA );
+           if (ret == 0 ) {
+               printf("%s %d htotal: %d vtotal: %d hstart: %d vstart: %d", htotal, vtotal,
+                                  hstart,vstart);
+           } else {
+               printf("\n meson_drm_getSignalTimingInfo fail\n");
            }
         }
         meson_close_drm(drmFd);
