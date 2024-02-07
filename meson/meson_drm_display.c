@@ -643,7 +643,7 @@ static int  _get_frac_rate_policy()
     return ret;
 }
 
-static int get_mode_by_crtc_pipe (int drmFd, int pipe, drmModeModeInfo* mode)
+static int get_mode_by_crtc_pipe (int drmFd, int pipe, drmModeModeInfo* mode, int* crtc_pipe)
 {
     int ret = -1;
     int crtcId = -1;
@@ -654,11 +654,12 @@ static int get_mode_by_crtc_pipe (int drmFd, int pipe, drmModeModeInfo* mode)
         return ret;
     }
     drmModeRes *res= drmModeGetResources( drmFd );
-    if (pipe >= res->count_crtcs) {
-        ERROR("\n %s %d pipe:%d res->count_crtc:%d\n",__FUNCTION__,__LINE__,pipe, res->count_crtcs);
-        goto out;
+    if (pipe >= res->count_crtcs || pipe < 0) {
+        ERROR("\n %s %d pipe:%d res->count_crtc:%d change to pipe = 0\n",__FUNCTION__,__LINE__,pipe, res->count_crtcs);
+        pipe = 0;
     }
     crtcId = res->crtcs[pipe];
+    *crtc_pipe = pipe;
     if (crtcId < 0)
         goto out;
     crtc = drmModeGetCrtc(drmFd, crtcId);
@@ -678,6 +679,7 @@ int meson_drm_get_vblank_time(int drmFd, int nextVsync,uint64_t *vblankTime, uin
 {
     int ret = -1;
     int rc = -1;
+    int pipe = 0;
     drmModeModeInfo mode;
     if (drmFd < 0) {
         ERROR("%s %d drmFd < 0",__FUNCTION__,__LINE__);
@@ -686,7 +688,7 @@ int meson_drm_get_vblank_time(int drmFd, int nextVsync,uint64_t *vblankTime, uin
     if (nextVsync < 0)
         nextVsync = 0;
     memset(&mode, 0, sizeof(drmModeModeInfo));
-    if ( get_mode_by_crtc_pipe(drmFd, crtc_pipe, &mode) == 0 ) {
+    if ( get_mode_by_crtc_pipe(drmFd, crtc_pipe, &mode, &pipe) == 0 ) {
         *refreshInterval = (1000000LL+(mode.vrefresh/2)) / mode.vrefresh;
         if ( ( mode.vrefresh == 60 || mode.vrefresh == 30 || mode.vrefresh == 24
                || mode.vrefresh == 120 || mode.vrefresh == 240 )
@@ -698,7 +700,7 @@ int meson_drm_get_vblank_time(int drmFd, int nextVsync,uint64_t *vblankTime, uin
     }
     drmVBlank vbl;
     vbl.request.type= DRM_VBLANK_RELATIVE;
-    if (crtc_pipe == 1)
+    if (pipe == 1)
         vbl.request.type |= DRM_VBLANK_SECONDARY;
     vbl.request.sequence= nextVsync;
     vbl.request.signal= 0;
@@ -712,7 +714,9 @@ int meson_drm_get_vblank_time(int drmFd, int nextVsync,uint64_t *vblankTime, uin
         *vblankTime = vbl.reply.tval_sec * 1000000LL + vbl.reply.tval_usec;
     }
     ret = 0;
+
 out:
     return ret;
 }
+
 
