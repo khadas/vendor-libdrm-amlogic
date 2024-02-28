@@ -42,7 +42,10 @@ static int meson_amsysfs_set_sysfs_strs(const char *path, const char *val)
 	if (fd >= 0) {
 		bytes = write(fd, val, strlen(val));
 		close(fd);
-		return 0;
+		if (bytes != strlen(val))
+			return -1;
+		else
+			return 0;
 	}
 	return -1;
 }
@@ -147,10 +150,12 @@ struct mesonConnector *mesonConnectorCreate(int drmFd, int type)
 		goto exit;
 	}
 	for ( i= 0; i < res->count_connectors; ++i ) {
-	   if ( type == DRM_MODE_CONNECTOR_HDMIA ) {
-		meson_amsysfs_set_sysfs_strs(MESON_DRM_MODE_GETCONNECTOR_HDMI, "detect");
+		if ( type == DRM_MODE_CONNECTOR_HDMIA ) {
+			if (0 != meson_amsysfs_set_sysfs_strs(MESON_DRM_MODE_GETCONNECTOR_HDMI, "detect"))
+				ERROR("\n %s %d detect set fail for HDMIA\n", __FUNCTION__,__LINE__);
 	   } else if ( type == DRM_MODE_CONNECTOR_LVDS ) {
-		meson_amsysfs_set_sysfs_strs(MESON_DRM_MODE_GETCONNECTOR_VBYONE, "detect");
+			if (0 != meson_amsysfs_set_sysfs_strs(MESON_DRM_MODE_GETCONNECTOR_VBYONE, "detect"))
+				ERROR("\n %s %d detect set fail for LVDS\n", __FUNCTION__,__LINE__);
 	   }
 	   conn= drmModeGetConnector( drmFd, res->connectors[i] );
 	   if ( conn ) {
@@ -182,7 +187,7 @@ struct mesonConnector *mesonConnectorCreate(int drmFd, int type)
 		drmModeFreeEncoder(cur_encoder);
 		ret->count_modes = conn->count_modes;
 		if (ret->count_modes > 0) {
-			modes_info =  (drmModeModeInfo*)calloc( ret->count_modes, sizeof(drmModeModeInfo) );
+			modes_info =  (drmModeModeInfo*)malloc( ret->count_modes * sizeof(drmModeModeInfo) );
 			if (!modes_info) {
 				ERROR("%s %d calloc fail",__FUNCTION__,__LINE__);
 				goto exit;
@@ -227,16 +232,11 @@ int mesonConnectorUpdate(int drmFd, struct mesonConnector *connector)
 	drmModeEncoder* cur_encoder = NULL;
 	int blob_id = 0;
 	int j = 0;
-	conn= drmModeGetConnector( drmFd, connector->id );
-	//ret = (struct mesonConnector*)calloc( 1,sizeof(struct mesonConnector) );
 	if ( !connector ) {
 		ERROR("%s %d invalid parameters ",__FUNCTION__,__LINE__);
 		goto exit;
 	}
-	if ( !ret ) {
-		ERROR("%s %d mesonConnector create fail",__FUNCTION__,__LINE__);
-		goto exit;
-	}
+	conn= drmModeGetConnector( drmFd, connector->id );
 	if ( !conn ) {
 		ERROR("%s %d mesonConnectorCreate: unable to get connector for drmfd (%d) conn_id(%d)\n",__FUNCTION__,__LINE__, drmFd,connector->id);
 	goto exit;
@@ -398,7 +398,7 @@ void dump_connector(struct mesonConnector* connector)
 				   "vss vse vtot)",__FUNCTION__,__LINE__);
 		for (j = 0; j < connector->count_modes; j++) {
 			mode = &connector->modes[j];
-			INFO("  %s %d %d %d %d %d %d %d %d %d %d",
+			INFO("%s %d : %s %d %d %d %d %d %d %d %d %d %d",__FUNCTION__,__LINE__,
 			mode->name,
 			mode->vrefresh,
 			mode->hdisplay,

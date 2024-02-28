@@ -11,6 +11,7 @@
 #include <sys/ioctl.h>
 #include "dma-buf.h"
 #include "meson_drm_util.h"
+#include "meson_drm_log.h"
 
 struct drm_display *drm_kms_init(void);
 
@@ -116,11 +117,13 @@ int drm_waitvideoFence( int dmabuffd )
             }
             else if ( rc <= 0 )
             {
-                if ( rc == 0 ) errno= ETIME;
-                fprintf(stderr, "wait out video fence failed: fd %d errno %d\n", dma_fence.fd, errno);
+               if ( rc == 0 ) errno= ETIME;
+                ERROR("%s %d wait out video fence failed: fd %d errno %d\n",__FUNCTION__,__LINE__,
+                    dma_fence.fd, errno);
             }
             else if(pfd.revents & (POLLNVAL | POLLERR)) {
-                fprintf(stderr, "waiting on video fence fd %d, revents error\n", dma_fence.fd);
+                INFO("%s %d waiting on video fence fd %d, revents error\n",__FUNCTION__,__LINE__,
+                    dma_fence.fd);
             }
             break;
         }

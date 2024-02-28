@@ -32,7 +32,7 @@ extern "C" {
 #define DRM_CONNECTOR_PROP_DV_ENABLE       "dv_enable"
 #define DRM_CONNECTOR_PROP_COLOR_SPACE       "color_space"
 #define DRM_CONNECTOR_PROP_COLOR_DEPTH       "color_depth"
-#define DRM_CONNECTOR_PROP_Content_Type       "content type"
+#define DRM_CONNECTOR_PROP_HDMI_CONTENT_TYPE       "content type"
 #define DRM_CONNECTOR_PROP_ACTIVE       "ACTIVE"
 #define DRM_CONNECTOR_VRR_ENABLED       "VRR_ENABLED"
 #define DRM_CONNECTOR_FRAC_RATE_POLICY      "FRAC_RATE_POLICY"

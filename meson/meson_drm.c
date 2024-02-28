@@ -24,6 +24,7 @@
 
 #include "meson_drm.h"
 #include "meson_drmif.h"
+#include "meson_drm_log.h"
 
 /*
  * Create meson drm device object.
@@ -37,7 +38,7 @@ struct meson_device *meson_device_create(int fd, int render_fd)
 
     dev = calloc(sizeof(*dev), 1);
     if (!dev) {
-        fprintf(stderr, "failed to create device[%s].\n",
+        ERROR("%s %d failed to create device[%s].\n",__FUNCTION__,__LINE__,
                 strerror(errno));
         return NULL;
     }
@@ -78,13 +79,13 @@ struct meson_bo *meson_bo_create(struct meson_device *dev, size_t size,
     };
 
     if (size == 0) {
-        fprintf(stderr, "invalid size.\n");
+        ERROR("%s %d invalid size.\n",__FUNCTION__,__LINE__);
         goto fail;
     }
     bo = calloc(sizeof(*bo), 1);
-    printf("meson_bo_create：%p\n",bo);
+    INFO("%s %d meson_bo_create：%p\n",__FUNCTION__,__LINE__,bo);
     if (!bo) {
-        fprintf(stderr, "failed to create bo[%s].\n",
+        ERROR("%s %d failed to create bo[%s].\n",__FUNCTION__,__LINE__,
             strerror(errno));
         goto err_free_bo;
     }
@@ -93,7 +94,7 @@ struct meson_bo *meson_bo_create(struct meson_device *dev, size_t size,
     fd = alloc_only ? dev->render_fd : dev->fd;
 
     if (drmIoctl(fd, DRM_IOCTL_MESON_GEM_CREATE, &req)) {
-        fprintf(stderr, "failed to create gem object[%s].\n",
+        ERROR("%s %d failed to create gem object[%s].\n",__FUNCTION__,__LINE__,
                 strerror(errno));
         goto err_free_bo;
     }
@@ -115,7 +116,7 @@ fail:
  */
 void meson_bo_destroy(struct meson_bo *bo)
 {
-    printf("meson_bo_destroy：%p\n",bo);
+    INFO("%s %d meson_bo_destroy：%p\n",__FUNCTION__,__LINE__,bo);
     if (!bo)
         return;
     if (bo->vaddr)
@@ -138,8 +139,7 @@ uint32_t meson_bo_handle(struct meson_bo *bo)
 
 int meson_bo_dmabuf(struct meson_bo *bo, int alloc_only)
 {
-    int fd;
-    fd = alloc_only ? bo->dev->render_fd : bo->dev->fd;
+    int fd = alloc_only ? bo->dev->render_fd : bo->dev->fd;
     if (!bo->fd) {
         struct drm_prime_handle req = {
             .handle = bo->handle,
@@ -174,7 +174,7 @@ struct meson_bo *meson_bo_import(struct meson_device *dev, int fd, size_t size, 
 
     bo = calloc(sizeof(*bo), 1);
     if (!bo) {
-        fprintf(stderr, "failed to create bo[%s].\n",
+        ERROR("%s %d failed to create bo[%s].\n",__FUNCTION__,__LINE__,
             strerror(errno));
         goto fail;
     }

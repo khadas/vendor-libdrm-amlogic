@@ -622,8 +622,14 @@ static int  _amsysfs_get_sysfs_str(const char *path, char *valstr, int size)
     fd = open(path, O_RDONLY);
     if (fd >= 0) {
         memset(valstr,0,size);
-        read(fd, valstr, size - 1);
-        valstr[strlen(valstr)] = '\0';
+        ssize_t bytesRead = read(fd, valstr, size - 1);
+        if (bytesRead >= 0) {
+            valstr[bytesRead < size - 1 ? bytesRead : size - 1] = '\0';
+        } else {
+            sprintf(valstr, "%s", "fail");
+            close(fd);
+            return -1;
+        }
         close(fd);
     } else {
         sprintf(valstr, "%s", "fail");

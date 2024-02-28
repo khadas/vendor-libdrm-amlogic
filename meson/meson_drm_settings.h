@@ -203,7 +203,7 @@ int meson_drm_GetCrtcId(MESON_CONNECTOR_TYPE connType);
 int meson_drm_GetConnectorId(MESON_CONNECTOR_TYPE connType);
 char* meson_drm_GetPropName( ENUM_MESON_DRM_PROP_NAME enProp);
 
-int meson_drm_setFracRatePolicy(int drmFd, drmModeAtomicReq *req, int FracRate,
+int meson_drm_setFracRatePolicy(int drmFd, drmModeAtomicReq *req, uint32_t FracRate,
                                            MESON_CONNECTOR_TYPE connType);
 int meson_drm_getFracRatePolicy(int drmFd, MESON_CONNECTOR_TYPE connType);
 int meson_drm_getHdrForceMode(int drmFd, MESON_CONNECTOR_TYPE connType);

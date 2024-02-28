@@ -153,12 +153,15 @@ static int meson_drm_set_property(int drmFd, drmModeAtomicReq *req, uint32_t obj
     }
     struct mesonProperty *prop = NULL;
     prop = mesonPropertyCreate(drmFd, objId, objType, name);
-    propId = mesonPropertyGetId(prop);
-    mesonPropertyDestroy(prop);
-    DEBUG("%s %d name:%s objId:%d propId:%d value:%llu", __FUNCTION__,__LINE__,name, objId, propId, value);
-    rc = drmModeAtomicAddProperty( req, objId, propId, value );
-    if (rc < 0)
-        ERROR("%s %d drmModeAtomicAddProperty fail",__FUNCTION__,__LINE__);
+    if (prop) {
+        propId = mesonPropertyGetId(prop);
+        mesonPropertyDestroy(prop);
+        DEBUG("%s %d name:%s objId:%d propId:%d value:%llu", __FUNCTION__,__LINE__,name, objId, propId, value);
+        rc = drmModeAtomicAddProperty( req, objId, propId, value );
+        if (rc < 0)
+            ERROR("%s %d drmModeAtomicAddProperty fail",__FUNCTION__,__LINE__);
+        return rc;
+    }
     return rc;
 }
 
@@ -207,9 +210,9 @@ int meson_drm_getsupportedModesList(int drmFd, DisplayMode** modeInfo, int* mode
         return ret;
     }
     conn = get_current_connector(drmFd, connType);
-    if (conn == NULL || drmFd < 0)
-    {
+    if (conn == NULL) {
         ERROR("%s %d connector create fail",__FUNCTION__,__LINE__);
+        return ret;
     }
     drmModeModeInfo* modeall = NULL;
     int count = 0;
@@ -342,9 +345,15 @@ int meson_drm_changeMode(int drmFd, drmModeAtomicReq *req, DisplayMode* modeInfo
         int rc4 = -1;
         connHDMI = get_current_connector(drmFd, MESON_CONNECTOR_HDMIA);
         HDMIconnId = mesonConnectorGetId(connHDMI);
-        rc4 = meson_drm_set_property(drmFd, req, HDMIconnId, DRM_MODE_OBJECT_CONNECTOR, "CRTC_ID", 0);
+        if (HDMIconnId) {
+            rc4 = meson_drm_set_property(drmFd, req, HDMIconnId, DRM_MODE_OBJECT_CONNECTOR, "CRTC_ID", 0);
+        }
+        if (rc4 == -1) {
+            ERROR("\n %s %d fail to disconnect HDMI \n", __FUNCTION__,__LINE__);
+        } else {
+            INFO(" %s %d change mode to cvbs, disconnect HDMI :%d ",__FUNCTION__,__LINE__,rc4);
+        }
         mesonConnectorDestroy(drmFd,connHDMI);
-        DEBUG(" %s %d change mode to cvbs, disconnect HDMI :%d ",__FUNCTION__,__LINE__,rc4);
     }
     conn = get_current_connector(drmFd, connType);
     connId = mesonConnectorGetId(conn);
@@ -656,10 +665,12 @@ void meson_drm_getEDIDData(int drmFd, MESON_CONNECTOR_TYPE connType, int * data_
     *data = edid;
     DEBUG("%s %d data_Len: %d",__FUNCTION__,__LINE__, (*data_Len));
     for (int i = 0; i < (*data_Len); i++) {
-        if (i % 16 == 0)
+        if (i % 16 == 0) {
             DEBUG_EDID("\n\t\t\t");
-            if (*data)
+        }
+        if (*data) {
             DEBUG_EDID("%.2hhx", (*data)[i]);
+        }
     }
 out:
     if (conn)
@@ -808,7 +819,7 @@ ENUM_MESON_HDCP_Content_Type meson_drm_getHDCPContentType( int drmFd, MESON_CONN
 MESON_CONTENT_TYPE meson_drm_getContentType(int drmFd, MESON_CONNECTOR_TYPE connType ) {
 
     char propName[PROP_NAME_MAX_LEN] = {'\0'};
-    sprintf( propName, "%s", DRM_CONNECTOR_PROP_Content_Type);
+    sprintf( propName, "%s", DRM_CONNECTOR_PROP_HDMI_CONTENT_TYPE);
     uint32_t value = 0;
     MESON_CONTENT_TYPE ContentType = MESON_CONTENT_TYPE_RESERVED;
     if ( drmFd < 0) {
@@ -1212,12 +1223,12 @@ char* meson_drm_GetPropName( ENUM_MESON_DRM_PROP_NAME enProp) {
 }
 
 int meson_drm_setFracRatePolicy(int drmFd, drmModeAtomicReq *req,
-                       int FracRate, MESON_CONNECTOR_TYPE connType)
+                       uint32_t FracRate, MESON_CONNECTOR_TYPE connType)
 {
     int ret = -1;
     int rc = -1;
     struct mesonConnector* conn = NULL;
-    int connId = 0;
+    uint32_t connId = 0;
     if ( drmFd < 0 || req == NULL) {
         ERROR("%s %d invalid parameter return",__FUNCTION__,__LINE__);
         return ret;
@@ -1240,7 +1251,7 @@ int meson_drm_getFracRatePolicy(int drmFd, MESON_CONNECTOR_TYPE connType)
 {
     char propName[PROP_NAME_MAX_LEN] = {'\0'};
     sprintf( propName, "%s", DRM_CONNECTOR_FRAC_RATE_POLICY);
-    int value = -1;
+    uint32_t value = 0;
     if ( drmFd < 0) {
         ERROR("%s %d drmFd < 0",__FUNCTION__,__LINE__);
         return value;
@@ -1274,7 +1285,7 @@ int meson_drm_setHdrForceMode(int drmFd, drmModeAtomicReq *req,ENUM_MESON_DRM_FO
     int ret = -1;
     int rc = -1;
     struct mesonConnector* conn = NULL;
-    int crtcId = 0;
+    uint32_t crtcId = 0;
     if ( drmFd < 0 || req == NULL) {
         ERROR(" %s %d invalid parameter return",__FUNCTION__,__LINE__);
         return ret;

@@ -15,7 +15,7 @@
 #include <linux/string.h>
 
 #include "meson_drm_event.h"
-#include "meson_drm_display.h"
+#include "meson_drm_settings.h"
 #include "meson_drm_log.h"
 
 #ifndef XDG_RUNTIME_DIR
@@ -58,18 +58,15 @@ bool RegisterDisplayEventCallback(displayEventCallback cb)
     }
     return ret;
 }
-bool get_hdcp_status(ENUM_HDCP_STATUS *status)
+bool get_hdcp_status()
 {
-    uint32_t prop_value = 0;
-    if (meson_drm_get_prop( ENUM_DRM_PROP_GETRX_HDCP_AUTHMODE, &prop_value ) == 0) {
-        if (!!(prop_value & 0x8))
-            *status = HDCP_STATUS_AUTHENTICATED;
-        else
-            *status = HDCP_STATUS_AUTHENTICATIONFAILURE;
-        return true;
-    } else {
-        return false;
+    bool ret = false;
+    int fd = meson_open_drm();
+    if (MESON_AUTH_STATUS_SUCCESS == meson_drm_getHdcpAuthStatus(fd, MESON_CONNECTOR_HDMIA)) {
+        ret = true;
     }
+    meson_close_drm(fd);
+    return ret;
 }
 
 static void* uevent_monitor_thread(void *arg)
@@ -79,11 +76,12 @@ static void* uevent_monitor_thread(void *arg)
     struct udev *udev = NULL;
     struct udev_device *dev = NULL;
     struct udev_monitor *mon = NULL;
-    ENUM_MESON_DRM_CONNECTION enConnection = MESON_DRM_UNKNOWNCONNECTION;
-    ENUM_MESON_DRM_CONNECTION enPreConnection = MESON_DRM_UNKNOWNCONNECTION;
+    ENUM_MESON_CONN_CONNECTION enConnection = MESON_UNKNOWNCONNECTION;
+    ENUM_MESON_CONN_CONNECTION enPreConnection = MESON_UNKNOWNCONNECTION;
     ENUM_DISPLAY_EVENT enDisplayEvent = DISPLAY_EVENT_MAX;
-    ENUM_HDCP_STATUS enPreStatus = HDCP_STATUS_MAX;
-    ENUM_HDCP_STATUS enCurStatus = HDCP_STATUS_MAX;
+    bool enPreStatus = false;
+    bool enCurStatus = false;
+    int drm_fd = meson_open_drm();
     /* create udev object */
     udev = udev_new();
     if (!udev) {
@@ -123,7 +121,7 @@ static void* uevent_monitor_thread(void *arg)
                                         DEBUG("%s %d I: DEVPATH=%s",__FUNCTION__, __LINE__, udev_device_get_devpath(dev));
                                         struct udev_list_entry *list_entry;
                                         udev_list_entry_foreach(list_entry, udev_device_get_properties_list_entry(dev)) {
-                                            ERROR("%s=%s\n",
+                                            INFO("%s=%s\n",
                                                    udev_list_entry_get_name(list_entry),
                                                    udev_list_entry_get_value(list_entry));
                                             if (!strcmp(udev_list_entry_get_name(list_entry), "HOTPLUG"))
@@ -132,10 +130,10 @@ static void* uevent_monitor_thread(void *arg)
                                                 isConnectorEvent = true;
                                         }
                                         if (isHPD && !isConnectorEvent) {
-                                            enConnection = meson_drm_getConnection();
+                                            enConnection = meson_drm_getConnectionStatus(drm_fd, MESON_CONNECTOR_HDMIA);
                                             if ( enPreConnection != enConnection) {
                                                 enPreConnection = enConnection;
-                                                ERROR("%s %d Send %s HDMI Hot Plug Event !!!",__FUNCTION__, __LINE__,
+                                                INFO("%s %d Send %s HDMI Hot Plug Event !!!",__FUNCTION__, __LINE__,
                                                         (enConnection ? "Connect":"DisConnect"));
                                                 enDisplayEvent = enConnection ? DISPLAY_EVENT_CONNECTED:DISPLAY_EVENT_DISCONNECTED;
                                                 if (_DisplayEventCb) {
@@ -143,24 +141,23 @@ static void* uevent_monitor_thread(void *arg)
                                                 }
                                             }
                                         }
-                                        if ( !get_hdcp_status(&enCurStatus) )
-                                            ERROR("%s:%d: get_hdcp_status fail", __func__, __LINE__);
+                                        enCurStatus = get_hdcp_status();
                                         if ( enCurStatus != enPreStatus ) {
                                             enPreStatus = enCurStatus;
-                                            enDisplayEvent = enCurStatus ? DISPLAY_HDCP_AUTHENTICATIONFAILURE:DISPLAY_HDCP_AUTHENTICATED;
-                                                ERROR("%s %d Send %s !!!\n",__FUNCTION__, __LINE__, (enCurStatus ? "DISPLAY_HDCP_AUTHENTICATIONFAILURE":"DISPLAY_HDCP_AUTHENTICATED"));
+                                            enDisplayEvent = enCurStatus ? DISPLAY_HDCP_AUTHENTICATED:DISPLAY_HDCP_AUTHENTICATIONFAILURE;
+                                            INFO("%s %d Send %s !!!\n",__FUNCTION__, __LINE__, (enCurStatus ? "DISPLAY_HDCP_AUTHENTICATED":"DISPLAY_HDCP_AUTHENTICATIONFAILURE"));
                                             if (_DisplayEventCb) {
                                                 _DisplayEventCb( enDisplayEvent, NULL);
-                                                }
+                                            }
                                         }
                                     }
                                     /* free dev */
                                     udev_device_unref(dev);
                                 }
                                 else {
-                                    ERROR("I:[%s:%d] udev_monitor_receive_device failed", __FUNCTION__, __LINE__);
-                                    enConnection = MESON_DRM_UNKNOWNCONNECTION;
-                                    enPreConnection = MESON_DRM_UNKNOWNCONNECTION;
+                                    INFO("I:[%s:%d] no udev_monitor_receive_device ", __FUNCTION__, __LINE__);
+                                    enConnection = MESON_UNKNOWNCONNECTION;
+                                    enPreConnection = MESON_UNKNOWNCONNECTION;
                                 }
                             } else {
                                 /* TODO: Select timeout or error; handle accordingly. */
@@ -176,7 +173,7 @@ static void* uevent_monitor_thread(void *arg)
     udev = NULL;
     dev = NULL;
     mon = NULL;
+    meson_close_drm(drm_fd);
     pthread_exit(NULL);
     return NULL;
 }
-
