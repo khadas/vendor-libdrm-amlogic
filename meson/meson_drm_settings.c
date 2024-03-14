@@ -1329,6 +1329,21 @@ int meson_drm_setDvMode(int drmFd, drmModeAtomicReq *req,
     return ret;
 }
 
+int meson_drm_getDvMode( int drmFd, MESON_CONNECTOR_TYPE connType ) {
+    char propName[PROP_NAME_MAX_LEN] = {'\0'};
+    sprintf( propName, "%s", DRM_CONNECTOR_DV_MODE);
+    uint32_t value = 0;
+    if ( drmFd < 0) {
+        ERROR("%s %d drmFd < 0",__FUNCTION__,__LINE__);
+        return -1;
+    }
+    if ( 0 != meson_drm_get_crtc_prop_value( drmFd, connType, propName, &value )) {
+         ERROR("%s %d get crtc property value fail",__FUNCTION__,__LINE__);
+    }
+    DEBUG("%s %d  get dv mode value %d",__FUNCTION__,__LINE__,value);
+    return value;
+}
+
 int meson_drm_getDpmsStatus( int drmFd, MESON_CONNECTOR_TYPE connType )
 {
     char propName[PROP_NAME_MAX_LEN] = {'\0'};

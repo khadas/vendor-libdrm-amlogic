@@ -210,6 +210,7 @@ int meson_drm_getHdrForceMode(int drmFd, MESON_CONNECTOR_TYPE connType);
 int meson_drm_setHdrForceMode(int drmFd, drmModeAtomicReq *req,ENUM_MESON_DRM_FORCE_MODE forcemode,
                                             MESON_CONNECTOR_TYPE connType);
 int meson_drm_setDvMode(int drmFd, drmModeAtomicReq *req, int dvMode, MESON_CONNECTOR_TYPE connType);
+int meson_drm_getDvMode( int drmFd, MESON_CONNECTOR_TYPE connType );
 int meson_drm_getGraphicPlaneSize(int drmFd, uint32_t* width, uint32_t* height);
 int meson_drm_getPhysicalSize(int drmFd, uint32_t* width, uint32_t* height, MESON_CONNECTOR_TYPE connType);
 int meson_drm_getSignalTimingInfo(int drmFd, uint16_t* htotal, uint16_t* vtotal, uint16_t* hstart,
