@@ -670,6 +670,7 @@ static int get_mode_by_crtc_pipe (int drmFd, int pipe, drmModeModeInfo* mode, in
         goto out;
     crtc = drmModeGetCrtc(drmFd, crtcId);
     if (!crtc || !crtc->mode_valid) {
+        ERROR("\n %s %d pipe:%d res->count_crtc:%d crtc (%p)\n",__FUNCTION__,__LINE__,pipe, res->count_crtcs, crtc);
         goto out;
     }
     memcpy(mode, &crtc->mode, sizeof(drmModeModeInfo) );
@@ -702,7 +703,8 @@ int meson_drm_get_vblank_time(int drmFd, int nextVsync,uint64_t *vblankTime, uin
            *refreshInterval = (1000000LL+(mode.vrefresh/2)) * 1001 / mode.vrefresh / 1000;
         }
     } else {
-        INFO("%s %d get mode fail",__FUNCTION__,__LINE__);
+        DEBUG("%s %d get mode fail, refreshInterval default to 0",__FUNCTION__,__LINE__);
+        *refreshInterval = 0;
     }
     drmVBlank vbl;
     vbl.request.type= DRM_VBLANK_RELATIVE;
@@ -722,6 +724,10 @@ int meson_drm_get_vblank_time(int drmFd, int nextVsync,uint64_t *vblankTime, uin
     ret = 0;
 
 out:
+    if (*refreshInterval == 0) {
+        ret = -1;
+        ERROR("%s %d get mode fail *refreshInterval == 0 return -1",__FUNCTION__,__LINE__);
+    }
     return ret;
 }
 
