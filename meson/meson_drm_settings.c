@@ -1447,3 +1447,27 @@ int meson_drm_getSignalTimingInfo(int drmFd, uint16_t* htotal, uint16_t* vtotal,
     return ret;
 }
 
+int meson_drm_getRxSupportedHdcpVersion( int drmFd, MESON_CONNECTOR_TYPE connType )
+{
+    char propName[PROP_NAME_MAX_LEN] = {'\0'};
+    sprintf( propName, "%s", DRM_CONNECTOR_PROP_RX_HDCP_SUPPORTED_VER);
+    uint32_t value = 0;
+    int prop_value = 0;
+    if ( drmFd < 0) {
+        ERROR("%s %d drmFd < 0",__FUNCTION__,__LINE__);
+        return prop_value;
+    }
+    if ( 0 == meson_drm_get_conn_prop_value( drmFd, connType, propName, &value )) {
+        DEBUG("%s %d get prop_value %d",__FUNCTION__,__LINE__,value);
+        if (value == 14)
+            prop_value = 0x1 << 0;
+        if (value == 22)
+            prop_value = 0x1 << 1;
+        if (value == 36)
+            prop_value = 0x1 | (0x1 << 1);
+    }
+    DEBUG("%s %d return prop_value %d",__FUNCTION__,__LINE__,prop_value);
+    return prop_value;
+}
+
+

@@ -33,7 +33,7 @@ int main(void )
                " 11.prefer mode 12.HDCP Content Type 13.Content Type 14.Dv Enable 15.active "
                " 16.vrr Enable 17.AVMute 18.Hdrcap 19.DvCap 20.default modeInfo 21.current aspect ratio value"
                " 22.frac rate policy 23.hdr force mode 24.dpms status 25.plane size 26.physical size"
-               " 27.Timing information 28.dv mode\n");
+               " 27.Timing information 28.dv mode 29.Rx supported HDCP versions\n");
         int get = 0;
         int drmFd = meson_open_drm();
         int len = scanf("%d", &get);
@@ -231,6 +231,20 @@ int main(void )
             } else {
                 printf("\n get dolby vision mode %d\n",value);
             }
+        } else if (get == 29 && len == 1) {
+            int value = meson_drm_getRxSupportedHdcpVersion( drmFd,MESON_CONNECTOR_HDMIA );
+            if (value & 0x1) {
+               printf("\nRX HDCP 1.4 supported\n");
+               if (value & 0x2) {
+                   printf("RX HDCP 2.2 supported as well\n");
+               } else {
+                   printf("RX HDCP 2.2 not supported\n");
+               }
+           } else {
+               if (!(value & 0x2)) {
+                   printf("\n meson_drm_get_prop fail\n");
+               }
+           }
         }
         meson_close_drm(drmFd);
     } else if (select_s_g == 0 && select_len == 1) {

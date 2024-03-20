@@ -215,6 +215,7 @@ int meson_drm_getGraphicPlaneSize(int drmFd, uint32_t* width, uint32_t* height);
 int meson_drm_getPhysicalSize(int drmFd, uint32_t* width, uint32_t* height, MESON_CONNECTOR_TYPE connType);
 int meson_drm_getSignalTimingInfo(int drmFd, uint16_t* htotal, uint16_t* vtotal, uint16_t* hstart,
                                              uint16_t* vstart, MESON_CONNECTOR_TYPE connType);
+int meson_drm_getRxSupportedHdcpVersion( int drmFd, MESON_CONNECTOR_TYPE connType );
 
 int meson_open_drm();
 void meson_close_drm(int drmFd);
