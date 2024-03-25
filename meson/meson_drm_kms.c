@@ -469,13 +469,17 @@ static int kms_set_plane(struct drm_display *drm_disp, struct drm_buf *buf)
     else
         crtc_h = buf->crtc_h;
 
+    if (!drmIsMaster(drm_disp->drm_fd))
+        drmSetMaster(drm_disp->drm_fd);
+
     if (drmModeSetPlane(drm_disp->drm_fd, plane_state->id, crtc_state->id, buf->fb_id,
                 0, buf->crtc_x, buf->crtc_y, crtc_w, crtc_h,
                 buf->src_x << 16, buf->src_y << 16, buf->src_w << 16, buf->src_h << 16)) {
-        ERROR("failed to set plane: %s\n",
-        strerror(errno));
+        ERROR("failed to set plane: %s\n", strerror(errno));
+        drmDropMaster(drm_disp->drm_fd);
         return -1;
     }
+        drmDropMaster(drm_disp->drm_fd);
 
     return ret;
 }
@@ -874,6 +878,7 @@ struct drm_display *drm_kms_init(void)
     base->import_buf = kms_import_buf;
     base->free_buf = kms_free_buf;
     base->post_buf = kms_post_buf;
+    base->set_plane = kms_set_plane;
     base->alloc_only = 0;
     base->freeze = 0;
 

@@ -79,6 +79,7 @@ struct drm_display {
     struct drm_buf *(*import_buf)(struct drm_display *disp, struct drm_buf_import *info);
     int (*free_buf)(struct drm_buf *buf);
     int (*post_buf)(struct drm_display *disp, struct drm_buf *buf);
+    int (*set_plane)(struct drm_display *disp, struct drm_buf *buf);
 
     void (*display_done_callback)(void *priv);
     void *priv;
