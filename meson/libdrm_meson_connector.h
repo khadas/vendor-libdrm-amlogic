@@ -39,6 +39,7 @@ extern "C" {
 #define DRM_CONNECTOR_PROP_TX_HDR_OFF      "force_output"
 #define DRM_CONNECTOR_DV_MODE       "dv_mode"
 #define DRM_CONNECTOR_PROP_DPMS       "DPMS"
+#define DRM_CONNECTOR_PROP_BACKGROUND_COLOR     "BACKGROUND_COLOR"
 
 struct mesonPrimaryPlane;
 struct mesonConnector;

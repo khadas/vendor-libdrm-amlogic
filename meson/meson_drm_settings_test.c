@@ -250,7 +250,7 @@ int main(void )
     } else if (select_s_g == 0 && select_len == 1) {
         printf("set value:1.av mute 2.HDMI HDCP enable  3.HDCP Content Type "
         " 4.DvEnable 5.active 6.vrr Enable 7.video zorder 8.plane mute 9.aspect ratio"
-        " 10.frac rate policy 11.hdr force mode 12.dv mode\n");
+        " 10.frac rate policy 11.hdr force mode 12.dv mode 13.background color\n");
         int set = 0;
         int ret = -1;
         drmModeAtomicReq * req;
@@ -402,6 +402,20 @@ int main(void )
                 } else {
                     printf("\n scanf fail\n");
                 }
+        } else if (set == 13 && len == 1) {
+            printf("\n please input backgroundColor:\n");
+            uint64_t backgroundColor = 0;
+            len = scanf("%llx", &backgroundColor);
+            printf("\n backgroundColor %llu\n",backgroundColor);
+            if (len == 1) {
+                if (meson_drm_setBackGroundColor( drmFd, req, backgroundColor, MESON_CONNECTOR_HDMIA)) {
+                    printf("\n meson_drm_setBackGroundColor fail\n");
+                } else {
+                    printf("\n meson_drm_setBackGroundColor SUCCESS\n");
+                }
+             } else {
+                printf("\n scanf fail\n");
+             }
         }
         ret = drmModeAtomicCommit(drmFd, req, DRM_MODE_ATOMIC_ALLOW_MODESET, NULL);
         if (ret) {

@@ -1360,6 +1360,30 @@ int meson_drm_getDpmsStatus( int drmFd, MESON_CONNECTOR_TYPE connType )
     return value;
 }
 
+int meson_drm_setBackGroundColor(int drmFd, drmModeAtomicReq *req, uint64_t backgroundColor,
+                           MESON_CONNECTOR_TYPE connType) {
+    int ret = -1;
+    int rc = -1;
+    struct mesonConnector* conn = NULL;
+    uint32_t crtcId = 0;
+    DEBUG("%s %d set background current color %llx",__FUNCTION__,__LINE__,backgroundColor);
+    if ( drmFd < 0 || req == NULL) {
+        ERROR(" %s %d invalid parameter return",__FUNCTION__,__LINE__);
+        return ret;
+    }
+    conn = get_current_connector(drmFd, connType);
+    if (conn) {
+        DEBUG("%s %d get current connector success",__FUNCTION__,__LINE__);
+        crtcId = mesonConnectorGetCRTCId(conn);
+        rc = meson_drm_set_property(drmFd, req, crtcId, DRM_MODE_OBJECT_CRTC,
+                       DRM_CONNECTOR_PROP_BACKGROUND_COLOR, backgroundColor);
+        mesonConnectorDestroy(drmFd,conn);
+    }
+    if (rc >= 0)
+        ret = 0;
+    return ret;
+}
+
 int meson_drm_getGraphicPlaneSize(int drmFd, uint32_t* width, uint32_t* height) {
     int ret = -1;
     struct mesonPrimaryPlane* planesize = NULL;
