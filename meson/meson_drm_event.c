@@ -23,10 +23,12 @@
 #endif
 #define LIBUDEV_EVT_TYPE_KERNEL     "kernel"
 #define LIBUDEV_SUBSYSTEM_DRM       "drm"
+#define LIBUDEV_SUBSYSTEM_HDMITX    "amhdmitx"
 
 static bool isMonitoringAlive = false;
 displayEventCallback _DisplayEventCb = NULL;
 static void* uevent_monitor_thread(void *arg);
+static void* hdmitx_uevent_monitor_thread(void *arg);
 
 void startDisplayUeventMonitor()
 {
@@ -39,8 +41,17 @@ void startDisplayUeventMonitor()
     DEBUG("[%s:%d]", __FUNCTION__, __LINE__);
     err = pthread_create (&event_monitor_threadId, &attr,uevent_monitor_thread,NULL);
     if (err) {
-        ERROR("%s %d DSHAL : Failed to Ceate HDMI Hot Plug Thread ....\r",__FUNCTION__, __LINE__);
+        ERROR("%s %d Failed to Ceate HDMI Hot Plug Thread ....\n",__FUNCTION__, __LINE__);
         event_monitor_threadId = -1;
+    }
+    pthread_t hdmitx_event_monitor_threadId;
+    pthread_attr_t hdmitx_thread_attr;
+    pthread_attr_init(&hdmitx_thread_attr);
+    pthread_attr_setdetachstate(&hdmitx_thread_attr,PTHREAD_CREATE_DETACHED);
+    err = pthread_create (&hdmitx_event_monitor_threadId, &hdmitx_thread_attr,hdmitx_uevent_monitor_thread,NULL);
+    if (err) {
+        ERROR("%s %d Failed to Create hdmi tx monitor Thread ....\n",__FUNCTION__, __LINE__);
+        hdmitx_event_monitor_threadId = -1;
     }
 }
 void stopDisplayUeventMonitor()
@@ -79,8 +90,6 @@ static void* uevent_monitor_thread(void *arg)
     ENUM_MESON_CONN_CONNECTION enConnection = MESON_UNKNOWNCONNECTION;
     ENUM_MESON_CONN_CONNECTION enPreConnection = MESON_UNKNOWNCONNECTION;
     ENUM_DISPLAY_EVENT enDisplayEvent = DISPLAY_EVENT_MAX;
-    bool enPreStatus = false;
-    bool enCurStatus = false;
     int drm_fd = meson_open_drm();
     /* create udev object */
     udev = udev_new();
@@ -137,17 +146,8 @@ static void* uevent_monitor_thread(void *arg)
                                                         (enConnection ? "Connect":"DisConnect"));
                                                 enDisplayEvent = enConnection ? DISPLAY_EVENT_CONNECTED:DISPLAY_EVENT_DISCONNECTED;
                                                 if (_DisplayEventCb) {
-                                                    _DisplayEventCb( enDisplayEvent, NULL);
+                                                    _DisplayEventCb( enDisplayEvent, NULL );
                                                 }
-                                            }
-                                        }
-                                        enCurStatus = get_hdcp_status();
-                                        if ( enCurStatus != enPreStatus ) {
-                                            enPreStatus = enCurStatus;
-                                            enDisplayEvent = enCurStatus ? DISPLAY_HDCP_AUTHENTICATED:DISPLAY_HDCP_AUTHENTICATIONFAILURE;
-                                            INFO("%s %d Send %s !!!\n",__FUNCTION__, __LINE__, (enCurStatus ? "DISPLAY_HDCP_AUTHENTICATED":"DISPLAY_HDCP_AUTHENTICATIONFAILURE"));
-                                            if (_DisplayEventCb) {
-                                                _DisplayEventCb( enDisplayEvent, NULL);
                                             }
                                         }
                                     }
@@ -165,10 +165,13 @@ static void* uevent_monitor_thread(void *arg)
                         }
                     }
                 }
+                close(fd);
             }
+            udev_monitor_unref(mon);
         } else {
             ERROR("ERROR[%s:%d] udev_monitor_new_from_netlink failed", __FUNCTION__, __LINE__);
         }
+        udev_unref(udev);
     }
     udev = NULL;
     dev = NULL;
@@ -177,3 +180,85 @@ static void* uevent_monitor_thread(void *arg)
     pthread_exit(NULL);
     return NULL;
 }
+static void* hdmitx_uevent_monitor_thread(void *arg)
+{
+    DEBUG("[%s:%d]start", __FUNCTION__, __LINE__);
+    struct udev *udev = NULL;
+    struct udev_device *dev = NULL;
+    struct udev_monitor *mon = NULL;
+    ENUM_DISPLAY_EVENT enDisplayEvent = DISPLAY_EVENT_MAX;
+    /* create udev object */
+    udev = udev_new();
+    if (!udev) {
+        ERROR("ERROR[%s:%d] Can't create udev monitor for DRM", __FUNCTION__, __LINE__);
+    } else {
+        mon = udev_monitor_new_from_netlink(udev, LIBUDEV_EVT_TYPE_KERNEL);
+        if (mon) {
+            int fd = -1;
+            fd_set fds;
+            struct timeval tv;
+            int ret;
+            int curHdcp = 0;
+            int preHdcp = 0;
+            if ((fd = udev_monitor_get_fd(mon)) < 0) {
+                ERROR("ERROR[%s:%d] udev_monitor_get_fd failed", __FUNCTION__, __LINE__);
+            } else {
+                if (udev_monitor_filter_add_match_subsystem_devtype(mon, LIBUDEV_SUBSYSTEM_HDMITX, NULL) < 0) {
+                    ERROR("ERROR[%s:%d] udev_monitor_filter_add_match_subsystem_devtype failed", __FUNCTION__, __LINE__);
+                } else {
+                    if (udev_monitor_enable_receiving(mon) < 0) {
+                        ERROR("ERROR[%s:%d] udev_monitor_enable_receiving", __FUNCTION__, __LINE__);
+                    } else {
+                        while (isMonitoringAlive) {
+                            FD_ZERO(&fds);
+                            FD_SET(fd, &fds);
+                            tv.tv_sec = 5;
+                            tv.tv_usec = 0;
+                            ret = select(fd+1, &fds, NULL, NULL, &tv);
+                            if (ret > 0 && FD_ISSET(fd, &fds)) {
+                                dev = udev_monitor_receive_device(mon);
+                                if (dev) {
+                                    if (!strcmp(udev_device_get_action(dev), "change")) {
+                                        DEBUG("%s %d I: ACTION=%s",__FUNCTION__, __LINE__, udev_device_get_action(dev));
+                                        DEBUG("%s %d I: DEVNAME=%s",__FUNCTION__, __LINE__, udev_device_get_sysname(dev));
+                                        DEBUG("%s %d I: DEVPATH=%s",__FUNCTION__, __LINE__, udev_device_get_devpath(dev));
+                                        struct udev_list_entry *list_entry;
+                                        udev_list_entry_foreach(list_entry, udev_device_get_properties_list_entry(dev)) {
+                                            INFO("%s=%s\n",
+                                                   udev_list_entry_get_name(list_entry),
+                                                   udev_list_entry_get_value(list_entry));
+                                            if (!strcmp(udev_list_entry_get_name(list_entry), "hdmitx_hdcp"))
+                                                curHdcp = atoi(udev_list_entry_get_value(list_entry));
+                                        }
+                                        if (curHdcp != preHdcp) {
+                                                preHdcp = curHdcp;
+                                                INFO("%s %d Send %s hdcp event !!!",__FUNCTION__, __LINE__,
+                                                        (curHdcp ? "AUTHENTICATED":"AUTHENTICATIONFAILURE"));
+                                                enDisplayEvent = curHdcp ? DISPLAY_HDCP_AUTHENTICATED:DISPLAY_HDCP_AUTHENTICATIONFAILURE;
+                                                if (_DisplayEventCb) {
+                                                    _DisplayEventCb( enDisplayEvent, NULL);
+                                                }
+                                        }
+                                }
+                                /* free dev */
+                                udev_device_unref(dev);
+                                }
+                            }
+                        }
+                    }
+                }
+                close(fd);
+            }
+            udev_monitor_unref(mon);
+        } else {
+            ERROR("ERROR[%s:%d] udev_monitor_new_from_netlink failed", __FUNCTION__, __LINE__);
+        }
+        udev_unref(udev);
+    }
+    udev = NULL;
+    dev = NULL;
+    mon = NULL;
+    pthread_exit(NULL);
+    return NULL;
+}
+
