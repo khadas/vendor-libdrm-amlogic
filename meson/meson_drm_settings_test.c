@@ -33,7 +33,7 @@ int main(void )
                " 11.prefer mode 12.HDCP Content Type 13.Content Type 14.Dv Enable 15.active "
                " 16.vrr Enable 17.AVMute 18.Hdrcap 19.DvCap 20.default modeInfo 21.current aspect ratio value"
                " 22.frac rate policy 23.hdr force mode 24.dpms status 25.plane size 26.physical size"
-               " 27.Timing information 28.dv mode 29.Rx supported HDCP versions\n");
+               " 27.Timing information 28.dv mode 29.Rx supported HDCP versions 30.cvbs video mute\n");
         int get = 0;
         int drmFd = meson_open_drm();
         int len = scanf("%d", &get);
@@ -245,12 +245,16 @@ int main(void )
                    printf("\n meson_drm_get_prop fail\n");
                }
            }
+        } else if (get == 30 && len == 1) {
+            int value = meson_drm_getCvbsAVMute( drmFd, MESON_CONNECTOR_CVBS );
+            printf("\n cvbs video mute value:  %d\n",value);
         }
         meson_close_drm(drmFd);
     } else if (select_s_g == 0 && select_len == 1) {
         printf("set value:1.av mute 2.HDMI HDCP enable  3.HDCP Content Type "
         " 4.DvEnable 5.active 6.vrr Enable 7.video zorder 8.plane mute 9.aspect ratio"
-        " 10.frac rate policy 11.hdr force mode 12.dv mode 13.background color\n");
+        " 10.frac rate policy 11.hdr force mode 12.dv mode 13.background color"
+        " 14.cvbs video mute\n");
         int set = 0;
         int ret = -1;
         drmModeAtomicReq * req;
@@ -416,6 +420,16 @@ int main(void )
              } else {
                 printf("\n scanf fail\n");
              }
+        } else if(set == 14 && len == 1){
+            printf("\n cvbs video mute:\n");
+            int mute = 0;
+            len = scanf("%d", &mute);
+            if (len == 1) {
+                if (meson_drm_setCvbsAVMute(drmFd, req,mute, MESON_CONNECTOR_CVBS))
+                    printf("\n meson_drm_setCvbsAVMute fail\n");
+            } else {
+                printf("\n scanf fail\n");
+            }
         }
         ret = drmModeAtomicCommit(drmFd, req, DRM_MODE_ATOMIC_ALLOW_MODESET, NULL);
         if (ret) {

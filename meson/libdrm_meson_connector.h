@@ -17,6 +17,7 @@ extern "C" {
 #include <unistd.h>
 #include <xf86drmMode.h>
 #define MESON_DRM_HDMITX_PROP_AVMUTE  "MESON_DRM_HDMITX_PROP_AVMUTE"
+#define MESON_DRM_CVBS_PROP_AVMUTE  "cvbs_video_mute"
 #define MESON_DRM_HDMITX_PROP_EOTF  "EOTF"
 #define DRM_CONNECTOR_PROP_CONTENT_PROTECTION "Content Protection"
 #define DRM_CONNECTOR_PROP_CONTENT_TYPE       "HDCP Content Type"

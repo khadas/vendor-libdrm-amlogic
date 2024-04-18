@@ -43,7 +43,8 @@ typedef enum _ENUM_MESON_DRM_PROP_NAME {
    ENUM_MESON_DRM_PROP_VRR_ENABLED,
    ENUM_MESON_DRM_PROP_ASPECT_RATIO,
    ENUM_MESON_DRM_PROP_TX_HDR_OFF,
-   ENUM_MESON_DRM_PROP_DV_MODE
+   ENUM_MESON_DRM_PROP_DV_MODE,
+   ENUM_MESON_DRM_CVBS_PROP_AVMUTE
 } ENUM_MESON_DRM_PROP_NAME;
 
 struct video_zpos {
@@ -217,6 +218,9 @@ int meson_drm_setBackGroundColor(int drmFd, drmModeAtomicReq *req,uint64_t backg
 int meson_drm_getPhysicalSize(int drmFd, uint32_t* width, uint32_t* height, MESON_CONNECTOR_TYPE connType);
 int meson_drm_getSignalTimingInfo(int drmFd, uint16_t* htotal, uint16_t* vtotal, uint16_t* hstart,
                                              uint16_t* vstart, MESON_CONNECTOR_TYPE connType);
+int meson_drm_setCvbsAVMute(int drmFd, drmModeAtomicReq *req,bool mute, MESON_CONNECTOR_TYPE connType);
+int meson_drm_getCvbsAVMute( int drmFd, MESON_CONNECTOR_TYPE connType );
+
 int meson_drm_getRxSupportedHdcpVersion( int drmFd, MESON_CONNECTOR_TYPE connType );
 
 int meson_open_drm();

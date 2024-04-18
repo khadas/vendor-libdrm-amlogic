@@ -1214,6 +1214,11 @@ char* meson_drm_GetPropName( ENUM_MESON_DRM_PROP_NAME enProp) {
                 strcpy(propName,DRM_CONNECTOR_DV_MODE);
                 break;
             }
+            case ENUM_MESON_DRM_CVBS_PROP_AVMUTE:
+            {
+                strcpy(propName, MESON_DRM_CVBS_PROP_AVMUTE);
+                break;
+            }
             default:
                 break;
         }
@@ -1471,6 +1476,47 @@ int meson_drm_getSignalTimingInfo(int drmFd, uint16_t* htotal, uint16_t* vtotal,
     return ret;
 }
 
+int meson_drm_setCvbsAVMute(int drmFd, drmModeAtomicReq *req,
+                       bool mute, MESON_CONNECTOR_TYPE connType)
+{
+    int ret = -1;
+    int rc = -1;
+    struct mesonConnector* conn = NULL;
+    uint32_t connId = 0;
+    if ( drmFd < 0 || req == NULL) {
+        ERROR(" %s %d invalid parameter return",__FUNCTION__,__LINE__);
+        return ret;
+    }
+    conn = get_current_connector(drmFd, connType);
+    if (conn) {
+        DEBUG("%s %d get current connector success",__FUNCTION__,__LINE__);
+        connId = mesonConnectorGetId(conn);
+        rc = meson_drm_set_property(drmFd, req, connId, DRM_MODE_OBJECT_CONNECTOR,
+                       MESON_DRM_CVBS_PROP_AVMUTE, (uint64_t)mute);
+        mesonConnectorDestroy(drmFd,conn);
+    }
+    if (rc >= 0)
+        ret = 0;
+    DEBUG(" %s %d set cvbs mute %d",__FUNCTION__,__LINE__, mute);
+    return ret;
+}
+
+int meson_drm_getCvbsAVMute( int drmFd, MESON_CONNECTOR_TYPE connType )
+{
+    char propName[PROP_NAME_MAX_LEN] = {'\0'};
+    sprintf( propName, "%s", MESON_DRM_CVBS_PROP_AVMUTE);
+    uint32_t value = 0;
+    if ( drmFd < 0) {
+        ERROR("%s %d drmFd < 0",__FUNCTION__,__LINE__);
+        return value;
+    }
+    if ( 0 != meson_drm_get_conn_prop_value( drmFd, connType, propName, &value )) {
+         ERROR("%s %d get connector property value fail",__FUNCTION__,__LINE__);
+    }
+    DEBUG("%s %d get cvbs video mute property %d",__FUNCTION__,__LINE__,value);
+    return value;
+}
+
 int meson_drm_getRxSupportedHdcpVersion( int drmFd, MESON_CONNECTOR_TYPE connType )
 {
     char propName[PROP_NAME_MAX_LEN] = {'\0'};
@@ -1493,5 +1539,4 @@ int meson_drm_getRxSupportedHdcpVersion( int drmFd, MESON_CONNECTOR_TYPE connTyp
     DEBUG("%s %d return prop_value %d",__FUNCTION__,__LINE__,prop_value);
     return prop_value;
 }
-
 
